@@ -24,7 +24,7 @@ import type {
   TranscribeResult,
   VerdictEvent,
 } from '../shared/ipc'
-import type { ReviewDraft, RingRow } from '../shared/types'
+import type { ReviewDraft, ReviewRow, RingRow } from '../shared/types'
 import { capabilitiesFor } from '../shared/capabilities'
 import { findResonantRing } from '../shared/resonance'
 import { transcribeAudio } from '../shared/asr'
@@ -37,6 +37,23 @@ import { runReflection } from '../shared/orchestrate/reflection'
 const RULES = rules as RulesFile
 
 const STORAGE_KEY = 'jieyou_rings_v1'
+const REVIEW_KEY = 'jieyou_reviews_v1'
+
+function loadSavedReviews(): ReviewRow[] {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(REVIEW_KEY)
+      if (raw) return JSON.parse(raw) as ReviewRow[]
+    }
+  } catch {}
+  return []
+}
+
+function persistReviews(list: ReviewRow[]): void {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(REVIEW_KEY, JSON.stringify(list))
+  } catch {}
+}
 const CONFIG_KEY = 'jieyou_model_config_v1'
 
 function loadSavedRings(): RingRow[] {
@@ -105,6 +122,7 @@ export function createMobileForestApi(): ForestApi {
   const errorListeners = new Set<(p: ErrorEvent) => void>()
 
   let rings: RingRow[] = loadSavedRings()
+  const reviews: ReviewRow[] = loadSavedReviews()
   let modelConfig: ModelConfigDto = loadSavedConfig()
   let currentInput = ''
   /** 当前会话的安全判定。L1/L2/L3 由真实的闸门给出，不再写死。 */
@@ -264,8 +282,25 @@ export function createMobileForestApi(): ForestApi {
       return { deleted: rings.length < before, stillReadable: false }
     },
 
-    async saveReview(_p: { ringId: string; draft: ReviewDraft }): Promise<{ reviewId: string }> {
-      return { reviewId: 'rev_' + Date.now().toString(36) }
+    async saveReview(p: { ringId: string; draft: ReviewDraft }): Promise<{ reviewId: string }> {
+      // 与桌面端共用同一份语义：复盘是**新增一条记录**，永远不覆盖年轮里的原决定。
+      // 这里原本直接返回一个凭空造的 id、什么都不存——那是在假装保存。
+      const id = 'rev_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+      reviews.unshift({
+        id,
+        ring_id: p.ringId,
+        outcome: p.draft.outcome,
+        observed_result: p.draft.observedResult,
+        premise_update: p.draft.premiseUpdate ?? null,
+        next_step: p.draft.nextStep ?? null,
+        created_at: new Date().toISOString(),
+      })
+      persistReviews(reviews)
+      return { reviewId: id }
+    },
+
+    async listReviews(p: { ringId?: string } = {}): Promise<ReviewRow[]> {
+      return p.ringId ? reviews.filter((r) => r.ring_id === p.ringId) : [...reviews]
     },
 
     async clearAll(): Promise<EmptyResult> {

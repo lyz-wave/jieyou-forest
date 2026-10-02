@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
-import type { ReviewDraft, RingDraft, RingRow } from '../../shared/types'
+import type { ReviewDraft, ReviewRow, RingDraft, RingRow } from '../../shared/types'
 
 export interface SaveSessionInput {
   id: string
@@ -113,13 +113,28 @@ export function deleteRing(db: Database.Database, id: string): boolean {
 export function saveReview(db: Database.Database, ringId: string, draft: ReviewDraft): string {
   const id = randomUUID()
   db.prepare(
-    `INSERT INTO review (id, ring_id, executed, observed_result, premise_update, next_step, created_at)
+    `INSERT INTO review (id, ring_id, outcome, observed_result, premise_update, next_step, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    id, ringId, draft.executed ? 1 : 0, draft.observedResult,
+    id, ringId, draft.outcome, draft.observedResult,
     draft.premiseUpdate ?? null, draft.nextStep ?? null, new Date().toISOString(),
   )
   return id
+}
+
+/**
+ * 读回复盘。
+ *
+ * 这一条以前不存在——saveReview 只写不读，于是"原决定 + 复盘对照"
+ * 在数据层就不可能实现。不传 ringId 就返回全部（首页要一次算出有哪些到期未复盘）。
+ */
+export function listReviews(db: Database.Database, ringId?: string): ReviewRow[] {
+  if (ringId) {
+    return db
+      .prepare('SELECT * FROM review WHERE ring_id = ? ORDER BY created_at DESC')
+      .all(ringId) as ReviewRow[]
+  }
+  return db.prepare('SELECT * FROM review ORDER BY created_at DESC').all() as ReviewRow[]
 }
 
 /** 只记类别，永不记正文。安全判定也走这里（safety_l1 / safety_l2 / safety_corrected）。 */

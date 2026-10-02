@@ -6,7 +6,7 @@ import { capabilitiesFor } from '../shared/capabilities'
 import type {
   DiscussionChunk, ForestApi, ReceiveChunk, ReflectionChunk, StateEvent, VerdictEvent,
 } from '../shared/ipc'
-import type { Capabilities, RingDraft, RingRow } from '../shared/types'
+import type { Capabilities, ReviewRow, RingDraft, RingRow } from '../shared/types'
 import { findResonantRing } from '../shared/resonance'
 
 // 逐幕走一遍的验收测试：拆分渲染层不应该改变任何一步的界面行为。
@@ -23,6 +23,7 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
   const verdictListeners: Array<(p: VerdictEvent) => void> = []
   const stateListeners: Array<(p: StateEvent) => void> = []
   const rings: RingRow[] = opts.initialRings ? [...opts.initialRings] : []
+  const reviews: ReviewRow[] = []
 
 
   const api: ForestApi = {
@@ -95,7 +96,15 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
       if (i >= 0) rings.splice(i, 1)
       return { deleted: i >= 0, stillReadable: rings.some((r) => r.id === id) }
     },
-    saveReview: async () => ({ reviewId: 'rv1' }),
+    saveReview: async ({ ringId, draft }) => {
+      reviews.unshift({
+        id: 'rv' + (reviews.length + 1), ring_id: ringId, outcome: draft.outcome,
+        observed_result: draft.observedResult, premise_update: null, next_step: null,
+        created_at: 'now',
+      })
+      return { reviewId: 'rv1' }
+    },
+    listReviews: async (p) => (p?.ringId ? reviews.filter((r) => r.ring_id === p.ringId) : [...reviews]),
     clearAll: async () => ({ empty: true }),
     demoReset: async () => ({ empty: true }),
     getModelConfig: async () => ({ baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', apiKey: 'test-key' }),

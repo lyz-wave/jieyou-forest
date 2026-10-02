@@ -8,6 +8,7 @@ import TrunkRingsDisc, {
   EMOTION_THEMES,
 } from '../tree/TrunkRingsDisc'
 import ResilienceProfile from '../tree/ResilienceProfile'
+import RingReview from '../tree/RingReview'
 
 
 export default function MyTree({ s }: { s: SessionController }) {
@@ -112,6 +113,25 @@ export default function MyTree({ s }: { s: SessionController }) {
                 {selectedRing.user_note}
               </div>
 
+              {/* 当时的决定必须显示出来。它是复盘的对照物——
+                  原决定不出现，"复盘不覆盖原决定"这条验收就无从谈起：
+                  你看不到自己当初决定了什么，也就看不出后来变了没有。 */}
+              {selectedRing.type === 'action' && selectedRing.user_decision && (
+                <div
+                  style={{
+                    background: 'rgba(255, 252, 246, 0.8)',
+                    borderLeft: '3px solid rgba(180, 160, 130, 0.6)',
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    margin: '8px 0',
+                    fontSize: 13,
+                  }}
+                >
+                  <strong>当时的决定：</strong>
+                  {selectedRing.user_decision}
+                </div>
+              )}
+
               {selectedRing.type === 'action' && selectedRing.action && (
                 <div style={{ background: 'rgba(0,0,0,0.03)', padding: '10px 12px', borderRadius: 8, margin: '8px 0', fontSize: 13 }}>
                   <div><strong>微行动：</strong>{selectedRing.action}</div>
@@ -123,6 +143,14 @@ export default function MyTree({ s }: { s: SessionController }) {
                   )}
                 </div>
               )}
+
+              {/* 复盘。放在原决定的正下方——两者并列，复盘永不覆盖原决定。 */}
+              <RingReview
+                ring={selectedRing}
+                reviews={s.reviews.filter((r) => r.ring_id === selectedRing.id)}
+                due={s.due.some((r) => r.id === selectedRing.id)}
+                onSave={(draft) => s.saveReview(selectedRing.id, draft)}
+              />
 
               {selectedRing.save_original === 1 && selectedRing.original_text && (
                 <div style={{ margin: '8px 0', fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>
@@ -176,6 +204,7 @@ export default function MyTree({ s }: { s: SessionController }) {
                 <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                   {r.type === 'support' ? '陪伴年轮' : '行动年轮'}
                   {r.review_due ? ' · 复盘日 ' + r.review_due : ''}
+                  {s.due.some((d) => d.id === r.id) ? ' · 到期了' : ''}
                   {' · ' + EMOTION_THEMES[inferRingEmotion(r)].label}
                 </div>
               </li>

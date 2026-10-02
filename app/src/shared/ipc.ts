@@ -1,5 +1,5 @@
 import type {
-  Capabilities, ReflectionCardId, ReviewDraft, RingDraft, RingRow, SafetyLevel, SessionPath, SessionStatus,
+  Capabilities, ReflectionCardId, ReviewDraft, ReviewRow, RingDraft, RingRow, SafetyLevel, SessionPath, SessionStatus,
 } from './types'
 
 /**
@@ -21,6 +21,7 @@ export const CH = {
     getRing: 'ring:get',
     deleteRing: 'ring:delete',
     saveReview: 'review:save',
+    listReviews: 'review:list',
     clearAll: 'data:clearAll',
     demoReset: 'demo:reset',
     getModelConfig: 'config:getModel',
@@ -223,6 +224,8 @@ export interface ForestApi {
   getRing(p: { id: string }): Promise<RingRow | undefined>
   deleteRing(p: { id: string }): Promise<DeleteResult>
   saveReview(p: { ringId: string; draft: ReviewDraft }): Promise<{ reviewId: string }>
+  /** 不传 ringId 返回全部——首页要一次算出哪些年轮到期且尚未复盘。 */
+  listReviews(p: { ringId?: string }): Promise<ReviewRow[]>
   clearAll(): Promise<EmptyResult>
   demoReset(): Promise<EmptyResult>
   getModelConfig(): Promise<ModelConfigDto>

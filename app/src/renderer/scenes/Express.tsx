@@ -76,6 +76,22 @@ export default function Express({ s }: { s: SessionController }) {
         </button>
       </div>
       {s.notice && <p className="muted">{s.notice}</p>}
+
+      {/* 到期提示。**只在真的有到期年轮时出现**，不是常驻——首页要保持极简。
+          这一行是在还债：用户被要求约定一个复盘日，而在此之前，
+          到了那天什么都不会发生，因为根本没人读这份约定。 */}
+      {s.due.length > 0 && (
+        <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+          你有 {s.due.length} 圈年轮到期了。
+          <button
+            type="button"
+            onClick={s.openTree}
+            style={{ marginLeft: 6, border: 0, background: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', fontSize: 12, padding: 0 }}
+          >
+            去看看
+          </button>
+        </p>
+      )}
       {showPrivacy && (
         <p className="muted" style={{ fontSize: 11, marginTop: 12 }}>
           数据只存在这台电脑上，明文、不加密。

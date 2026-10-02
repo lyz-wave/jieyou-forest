@@ -41,7 +41,7 @@ CREATE INDEX IF NOT EXISTS ring_created_idx ON ring(created_at DESC);
 CREATE TABLE IF NOT EXISTS review (
   id              TEXT PRIMARY KEY,
   ring_id         TEXT NOT NULL REFERENCES ring(id) ON DELETE CASCADE,
-  executed        INTEGER,
+  outcome         TEXT CHECK (outcome IN ('done','not_done','changed','unclear')),
   observed_result TEXT,
   premise_update  TEXT,
   next_step       TEXT,

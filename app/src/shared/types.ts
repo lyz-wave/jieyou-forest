@@ -43,9 +43,28 @@ export interface RingRow {
   idempotency_key: string
 }
 
+/**
+ * 复盘时对"那件小行动"的四选一。
+ * 刻意不是"成功/失败"二元：情况变了、说不清，都是真实且常见的结局，
+ * 二元会逼用户把这两类硬塞进"没做到"，那就成了评判。
+ */
+export type ReviewOutcome = 'done' | 'not_done' | 'changed' | 'unclear'
+
 export interface ReviewDraft {
-  executed: boolean
+  outcome: ReviewOutcome
+  /** 自由文字，可以为空——固定选项已经把成本压到最低了。 */
   observedResult: string
   premiseUpdate?: string
   nextStep?: string
+}
+
+/** 一条复盘记录。它和年轮里的原决定是并列关系，永不覆盖。 */
+export interface ReviewRow {
+  id: string
+  ring_id: string
+  outcome: ReviewOutcome | null
+  observed_result: string | null
+  premise_update: string | null
+  next_step: string | null
+  created_at: string
 }

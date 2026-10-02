@@ -25,6 +25,7 @@ const api: ForestApi = {
   getRing: (p) => invoke(CH.invoke.getRing, p),
   deleteRing: (p) => invoke(CH.invoke.deleteRing, p),
   saveReview: (p) => invoke(CH.invoke.saveReview, p),
+  listReviews: (p) => invoke(CH.invoke.listReviews, p),
   clearAll: () => invoke(CH.invoke.clearAll),
   demoReset: () => invoke(CH.invoke.demoReset),
   getModelConfig: () => invoke(CH.invoke.getModelConfig),

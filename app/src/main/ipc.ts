@@ -203,6 +203,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return { reviewId: repo.saveReview(c.db, ringId, draft) }
   })
 
+  ipcMain.handle(CH.invoke.listReviews, (_e, p: { ringId?: string } = {}) => {
+    const c = must()
+    return repo.listReviews(c.db, p.ringId)
+  })
+
   ipcMain.handle(CH.invoke.clearAll, () => {
     const c = must()
     repo.clearAll(c.db)

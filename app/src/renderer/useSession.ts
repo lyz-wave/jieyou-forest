@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Capabilities, ReflectionCardId, RingDraft, RingRow } from '../shared/types'
+import type { Capabilities, ReflectionCardId, ReviewDraft, ReviewRow, RingDraft, RingRow } from '../shared/types'
+import { dueRings } from '../shared/review'
 import type { CognitiveAnalysis, MicroExperiment, RingResonance } from '../shared/ipc'
 import { capabilitiesFor } from '../shared/capabilities'
 
@@ -25,6 +26,9 @@ export interface SessionController {
   reason: string
   notice: string
   rings: RingRow[]
+  reviews: ReviewRow[]
+  /** 到期且尚未复盘的行动年轮。首页据此决定要不要出现那一行提示。 */
+  due: RingRow[]
 
 
   setInput: (v: string) => void
@@ -37,6 +41,7 @@ export interface SessionController {
   correct: () => Promise<void>
   retryReceive: () => Promise<void>
   saveRing: (draft: RingDraft) => Promise<void>
+  saveReview: (ringId: string, draft: ReviewDraft) => Promise<void>
   openTree: () => Promise<void>
   removeRing: (id: string) => Promise<void>
   startOver: () => void
@@ -56,6 +61,7 @@ export function useSession(): SessionController {
   const [reason, setReason] = useState('')
   const [notice, setNotice] = useState('')
   const [rings, setRings] = useState<RingRow[]>([])
+  const [reviews, setReviews] = useState<ReviewRow[]>([])
   const [awaiting, setAwaiting] = useState(false)
   const [reflecting, setReflecting] = useState(false)
 
@@ -189,10 +195,34 @@ export function useSession(): SessionController {
     }
   }, [sessionId])
 
-  const openTree = useCallback(async () => {
-    setRings(await window.forest.listRings())
-    setScene('tree')
+  /** 年轮与复盘一起刷新——到期判定要同时看这两份数据。 */
+  const refreshRings = useCallback(async () => {
+    const [rs, rvs] = await Promise.all([
+      window.forest.listRings(),
+      window.forest.listReviews({}),
+    ])
+    setRings(rs)
+    setReviews(rvs)
   }, [])
+
+  // 打开应用就加载一次：首页要据此判断有没有到期未复盘的年轮。
+  // 本地 SQLite，代价可以忽略；而"到期了却没人提"正是这个功能此前的问题。
+  useEffect(() => {
+    void refreshRings()
+  }, [refreshRings])
+
+  const openTree = useCallback(async () => {
+    await refreshRings()
+    setScene('tree')
+  }, [refreshRings])
+
+  const saveReview = useCallback(
+    async (ringId: string, draft: ReviewDraft) => {
+      await window.forest.saveReview({ ringId, draft })
+      await refreshRings()
+    },
+    [refreshRings],
+  )
 
   const saveRing = useCallback(
     async (draft: RingDraft) => {
@@ -225,8 +255,9 @@ export function useSession(): SessionController {
 
   return {
     scene, input, sessionId, caps, banner, awaiting, reflecting, receive, cards, analysis, adoptedExperiment, resonance, reason, notice, rings,
+    reviews, due: dueRings(rings, reviews),
     setInput, go: setScene, submit, choose, consent, adoptExperiment, cancelReflect, correct,
-    retryReceive, saveRing, openTree, removeRing, startOver,
+    retryReceive, saveRing, saveReview, openTree, removeRing, startOver,
   }
 }
 
