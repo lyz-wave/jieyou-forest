@@ -27,6 +27,7 @@ export const CH = {
     saveModelConfig: 'config:saveModel',
     testModelConfig: 'config:testModel',
     listModels: 'config:listModels',
+    transcribe: 'voice:transcribe',
     discuss: 'reflect:discuss',
   },
   send: {
@@ -128,6 +129,13 @@ export interface ListModelsResult {
   error?: string
 }
 
+/** 本地语音转写的结果。走的是本机 whisper.cpp，音频不出这台电脑。 */
+export interface TranscribeResult {
+  ok: boolean
+  text: string
+  error?: string
+}
+
 export interface DiscussMessage {
   role: 'user' | 'assistant'
   content: string
@@ -198,6 +206,7 @@ export interface ForestApi {
   saveModelConfig(cfg: ModelConfigDto): Promise<{ ok: boolean }>
   testModelConfig(cfg: ModelConfigDto): Promise<TestModelResult>
   listModels(cfg: ModelConfigDto): Promise<ListModelsResult>
+  transcribe(p: { audio: ArrayBuffer; mimeType: string }): Promise<TranscribeResult>
   discuss(p: DiscussInput): Promise<DiscussResult>
 
   onReceive(cb: (p: ReceiveChunk) => void): () => void

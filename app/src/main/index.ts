@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc'
 
@@ -32,6 +32,12 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  // 本地语音转写要录音。不放行媒体权限的话，getUserMedia 会直接 reject，
+  // 界面上只能看到一个笼统的失败，查不出是权限问题。
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(permission === 'media')
+  })
+
   const win = createWindow()
   registerIpc(() => BrowserWindow.getAllWindows()[0] ?? win)
   app.on('activate', () => {

@@ -12,6 +12,7 @@ import {
 import rules from '../shared/gate/rules.json'
 import { applyCorrection, capabilitiesFor, evaluateGate, type RulesFile } from '../shared/gate/gate'
 import { createModelClient, listModels, loadConfig, testConnection, type ModelClient } from '../shared/model/client'
+import { transcribeLocal } from './voice/transcribe'
 import { runReceive } from '../shared/orchestrate/receive'
 import { runReflection, type ThreeViews } from '../shared/orchestrate/reflection'
 import { canEnterReflection, SessionMemory } from './orchestrate/session'
@@ -237,6 +238,10 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       receiveTimeoutMs: cfg.receiveTimeoutMs ?? 45_000,
       reflectTimeoutMs: cfg.reflectTimeoutMs ?? 30_000,
     })
+  })
+
+  ipcMain.handle(CH.invoke.transcribe, async (_e, p: { audio: ArrayBuffer; mimeType: string }) => {
+    return await transcribeLocal(p.audio, p.mimeType)
   })
 
   ipcMain.handle(CH.invoke.listModels, async (_e, cfg: ModelConfigDto) => {

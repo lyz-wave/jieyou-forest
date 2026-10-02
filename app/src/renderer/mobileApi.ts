@@ -2,6 +2,7 @@ import type {
   BannerResult,
   CognitiveAnalysis,
   ListModelsResult,
+  TranscribeResult,
   ConsentResult,
   CorrectResult,
   DeleteResult,
@@ -286,6 +287,12 @@ export function createMobileForestApi(): ForestApi {
         receiveTimeoutMs: cfg.receiveTimeoutMs ?? 45_000,
         reflectTimeoutMs: cfg.reflectTimeoutMs ?? 30_000,
       })
+    },
+
+    async transcribe(): Promise<TranscribeResult> {
+      // 桌面端的语音输入走本机 whisper.cpp。移动端没有这个工具，
+      // 与其假装能用，不如说清楚——界面会据此回退到浏览器的识别服务。
+      return { ok: false, text: '', error: '这个平台没有本地语音转写。' }
     },
 
     async getModelConfig(): Promise<ModelConfigDto> {
