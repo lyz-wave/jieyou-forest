@@ -5,6 +5,7 @@
   "description": "解忧森林 · 48 小时封包（Mac .app）",
   "main": "./out/main/index.js",
   "scripts": {
+    "postinstall": "node tools/ensure-electron.mjs",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",

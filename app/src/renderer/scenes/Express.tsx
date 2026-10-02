@@ -61,7 +61,11 @@ export default function Express({ s }: { s: SessionController }) {
             gap: 8,
           }}
         >
-          <VoiceInputButton onTranscript={handleVoiceTranscript} size="sm" />
+          <VoiceInputButton
+            onTranscript={handleVoiceTranscript}
+            size="sm"
+            title="点击麦克风语音输入（录音发往你自己配置的识别端点）"
+          />
         </div>
       </div>
       <div className="row">

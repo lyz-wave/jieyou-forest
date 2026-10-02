@@ -8,7 +8,9 @@ import {
   type SaveRingInput,
   type SendChannel,
   type SubmitInput,
+  type TranscribeInput,
 } from '../shared/ipc'
+import { transcribeAudio } from '../shared/asr'
 import rules from '../shared/gate/rules.json'
 import { applyCorrection, capabilitiesFor, evaluateGate, type RulesFile } from '../shared/gate/gate'
 import { createModelClient, listModels, loadConfig, testConnection, type ModelClient } from '../shared/model/client'
@@ -203,6 +205,44 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     const c = must()
     repo.clearAll(c.db)
     return { empty: repo.isDatabaseEmpty(c.db) }
+  })
+
+  // 语音转文字。渲染层只负责录音，网络请求放在主进程：
+  // 密钥不出主进程、也不受渲染层 CSP 影响。
+  const readModelConfig = (): ModelConfigDto => {
+    const raw = repo.getConfig(db, 'model_config')
+    if (raw) {
+      try {
+        return JSON.parse(raw) as ModelConfigDto
+      } catch {}
+    }
+    return loadConfig()
+  }
+
+  ipcMain.handle(CH.invoke.transcribe, async (_e, payload: TranscribeInput) => {
+    if (!payload?.audio || !payload.audio.byteLength) {
+      return { ok: false, error: '没有录到声音' }
+    }
+    const cfg = readModelConfig()
+    if (!cfg.apiKey?.trim()) {
+      return { ok: false, error: '还没有配置 API Key：语音识别要走你在「模型设置」里填写的端点' }
+    }
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 60_000)
+    try {
+      const text = await transcribeAudio({
+        audio: new Uint8Array(payload.audio),
+        mimeType: payload.mimeType,
+        config: { baseUrl: cfg.baseUrl, apiKey: cfg.apiKey, model: cfg.asrModel },
+        signal: controller.signal,
+      })
+      return { ok: true, text }
+    } catch (err: any) {
+      const msg = err?.name === 'AbortError' ? '识别超时（60 秒）' : err?.message || '语音识别失败'
+      return { ok: false, error: msg }
+    } finally {
+      clearTimeout(timer)
+    }
   })
 
   ipcMain.handle(CH.invoke.getModelConfig, () => {
