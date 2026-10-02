@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { SessionController } from '../useSession'
+import VoiceInputButton from '../voice/VoiceInputButton'
 
 const PRIVACY_SEEN_KEY = 'jieyou_seen_privacy_notice'
 
@@ -27,6 +28,10 @@ export default function Express({ s }: { s: SessionController }) {
       }
     } catch {}
   }, [])
+  const handleVoiceTranscript = (text: string) => {
+    s.setInput(s.input ? s.input + ' ' + text : text)
+  }
+
   const dismissPrivacy = () => {
     try {
       localStorage.setItem(PRIVACY_SEEN_KEY, '1')
@@ -37,12 +42,28 @@ export default function Express({ s }: { s: SessionController }) {
   return (
     <>
       <h1>今天想放下的，是心事，还是事情？</h1>
-      <textarea
-        value={s.input}
-        maxLength={2000}
-        placeholder="写一句就好，不用讲完整"
-        onChange={(e) => s.setInput(e.target.value)}
-      />
+      <div style={{ position: 'relative', width: '100%', marginBottom: 12 }}>
+        <textarea
+          value={s.input}
+          maxLength={2000}
+          placeholder="写一句就好，不用讲完整"
+          onChange={(e) => s.setInput(e.target.value)}
+          style={{ paddingBottom: 42 }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 12,
+            right: 12,
+            zIndex: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <VoiceInputButton onTranscript={handleVoiceTranscript} size="sm" />
+        </div>
+      </div>
       <div className="row">
         <button className="primary" onClick={s.submit} disabled={!s.input.trim()}>
           说完了

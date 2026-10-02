@@ -28,6 +28,13 @@ export default function PaperForest({
   recutSignal,
 }: PaperForestProps) {
   const [isNight, setIsNight] = useState(initialNight)
+
+  // 这个 prop 是受控的：设置里的开关改了它，舞台必须跟着变。
+  // 原来只当成初始值（useState(initialNight)），挂载之后再改 prop 完全没反应——
+  // 控件搬进设置之后，昼夜开关就变成了一个点了不动的按钮。
+  useEffect(() => {
+    setIsNight(initialNight)
+  }, [initialNight])
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const tagWrapRef = useRef<HTMLDivElement>(null)
