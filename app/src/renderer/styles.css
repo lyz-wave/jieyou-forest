@@ -139,12 +139,15 @@ html, body {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  /* 内容靠上，而不是垂直居中。
-     实测：首屏内容总高 280px、窗口 820px，居中会上下各留约 270px 空白，
-     读起来是"一小坨飘在正中间"。靠上之后空白集中在一处，观感是"这里还有空间"，
-     而不是"内容没放好"。内容超高时（树、三视角）这个属性本来就不起作用。 */
+  /* 内容要靠上，但不能贴着顶。三次实测（窗口 820px，内容高约 278px）：
+       · 垂直居中：内容从 270 开始 —— "一小坨飘在正中间"
+       · 9vh ≈ 74   —— 太靠上，像没放好
+       · 14vh ≈ 115 —— 仍略偏上
+     22vh ≈ 180：内容从 180 到 458，重心 319（窗口的 39%），
+     明显在上半部但不再局促；下方约 360px 插画空间读作"这里还有空间"。
+     内容超高时（树、三视角）这个属性本就不起作用。 */
   justify-content: flex-start;
-  padding: max(9vh, 56px, env(safe-area-inset-top, 24px)) max(20px, env(safe-area-inset-right, 16px)) max(52px, env(safe-area-inset-bottom, 24px)) max(20px, env(safe-area-inset-left, 16px));
+  padding: max(22vh, 128px, env(safe-area-inset-top, 24px)) max(20px, env(safe-area-inset-right, 16px)) max(52px, env(safe-area-inset-bottom, 24px)) max(20px, env(safe-area-inset-left, 16px));
   position: relative;
   z-index: 2;
   pointer-events: none;
@@ -340,6 +343,18 @@ button.ghost:active { transform: scale(0.97); }
 }
 
 .row { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0; align-items: center; }
+
+/* 只有单一主操作的那一行（首页）。
+   原来主按钮是一个 97px 的小胶囊，吊在 624px 宽的输入框左下方，
+   视觉上不像一整块操作区。让它与输入框同宽，两者读作一个整体。 */
+.row-block {
+  display: flex;
+  /* 与输入框贴紧一点，两者才读作一整块；15px 时联系感偏弱 */
+  margin: 10px 0 0;
+}
+.row-block > .primary {
+  flex: 1;
+}
 
 :focus-visible { outline: 2px solid var(--leaf-deep); outline-offset: 3px; border-radius: var(--r-sm); }
 

@@ -42,7 +42,7 @@ export default function Express({ s }: { s: SessionController }) {
   return (
     <>
       <h1>今天想放下的，是心事，还是事情？</h1>
-      <div style={{ position: 'relative', width: '100%', marginBottom: 12 }}>
+      <div style={{ position: 'relative', width: '100%', marginBottom: 2 }}>
         <textarea
           value={s.input}
           maxLength={2000}
@@ -68,7 +68,9 @@ export default function Express({ s }: { s: SessionController }) {
           />
         </div>
       </div>
-      <div className="row">
+      {/* row-block：主按钮与输入框同宽，读作一整块操作区。
+          原来是 97px 的小胶囊吊在 624px 的输入框下面，视觉上很散。 */}
+      <div className="row-block">
         {/* 请求进行中必须禁用：连点会创建多个会话，而两段回应的字会交织在一起。
             文案同时变掉——虽然切场景是毫秒级的，IPC 冷启动时仍会短暂看到它。 */}
         <button className="primary" onClick={s.submit} disabled={!s.input.trim() || s.awaiting}>
