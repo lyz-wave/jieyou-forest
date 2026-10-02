@@ -1,7 +1,6 @@
 import type { SessionController } from './useSession'
 import { useSession } from './useSession'
-import TreeCrest from './tree/TreeCrest'
-import Watercolor from './watercolor/Watercolor'
+import PaperForest from './paper/PaperForest'
 import Express from './scenes/Express'
 import Crisis from './scenes/Crisis'
 import Space from './scenes/Space'
@@ -31,9 +30,8 @@ export default function App() {
 
   return (
     <>
-      <Watercolor />
+      <PaperForest />
       <div className="shell">
-        <TreeCrest />
         {/* key 让每一幕进场时重放一次过渡；幕内状态不受影响 */}
         <div className="scene" key={s.scene}>
           <Scene s={s} />

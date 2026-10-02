@@ -120,6 +120,13 @@ body {
   flex-direction: column;
   justify-content: center;
   padding: 40px 28px 52px;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.shell > * {
+  pointer-events: auto;
 }
 
 h1 { font-size: 19px; font-weight: 600; margin: 0 0 4px; letter-spacing: 0.01em; }
@@ -147,21 +154,37 @@ h2 { font-weight: 600; }
   to { opacity: 1; transform: none; }
 }
 
-/* ---------- 玻璃材质 ---------- */
+/* ---------- 纸艺暖调卡片 ---------- */
 
 .card,
 .banner {
   position: relative;
-  background: var(--glass);
-  backdrop-filter: blur(var(--blur)) saturate(var(--sat));
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  background: rgba(252, 248, 238, 0.76);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  transform: translateZ(0);
   border-radius: var(--r-xl);
-  /* 三层：界面高光边、贴地的一像素、以及拉出景深的环境阴影 */
+  /* 界面高光纸边与景深阴影 */
   box-shadow:
-    inset 0 1px 0 var(--rim),
-    0 1px 2px rgba(46, 42, 34, 0.1),
-    0 10px 20px -14px rgba(46, 42, 34, 0.22),
-    0 32px 60px -30px rgba(40, 48, 34, 0.34);
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 3px rgba(58, 38, 18, 0.08),
+    0 10px 24px -12px rgba(58, 38, 18, 0.22),
+    0 28px 56px -28px rgba(39, 78, 82, 0.28);
+  transition: background var(--t-base) ease, color var(--t-base) ease, box-shadow var(--t-base) ease;
+}
+
+body.pf-night .card {
+  background: rgba(22, 26, 60, 0.78);
+  color: #f1ecf8;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 2px 4px rgba(4, 4, 20, 0.25),
+    0 16px 36px -12px rgba(2, 2, 16, 0.6);
+}
+
+body.pf-night .sub,
+body.pf-night .muted {
+  color: #b3aec8;
 }
 
 /* 高光边：玻璃反射环境光的那一圈 */
@@ -298,6 +321,57 @@ input[type="date"]:focus {
   outline: none;
 }
 
+body.pf-night textarea,
+body.pf-night input[type="text"],
+body.pf-night input[type="date"] {
+  background: rgba(14, 17, 44, 0.78);
+  color: #f6f3fc;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 10px 26px -18px rgba(0, 0, 0, 0.6);
+}
+
+body.pf-night textarea::placeholder {
+  color: rgba(179, 174, 200, 0.6);
+}
+
+body.pf-night textarea:focus,
+body.pf-night input[type="text"]:focus,
+body.pf-night input[type="date"]:focus {
+  background: rgba(22, 27, 66, 0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 0 0 1px rgba(155, 184, 155, 0.6),
+    0 14px 32px -18px rgba(14, 17, 44, 0.7);
+}
+
+body.pf-night .chip {
+  background: rgba(255, 255, 255, 0.08);
+  color: #d1ccdf;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+body.pf-night .chip:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+body.pf-night .chip[aria-pressed="true"] {
+  background: rgba(155, 184, 155, 0.32);
+  color: #e5f6e5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 0 1px rgba(155, 184, 155, 0.55);
+}
+
+body.pf-night button.ghost {
+  background: rgba(255, 255, 255, 0.1);
+  color: #eee9f8;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+body.pf-night button.ghost:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
 label.field { display: block; margin: 14px 0 5px; font-size: 13px; color: var(--muted); }
 
 /* ---------- 树 ---------- */
@@ -313,12 +387,19 @@ label.field { display: block; margin: 14px 0 5px; font-size: 13px; color: var(--
   background: radial-gradient(50% 50% at 50% 55%, rgba(255, 252, 232, 0.5), transparent 70%);
   pointer-events: none;
 }
+body.pf-night .tree::before {
+  background: radial-gradient(50% 50% at 50% 55%, rgba(130, 160, 255, 0.25), transparent 70%);
+}
 .tree svg {
   position: relative;
   width: 104px;
   height: auto;
   transform-origin: 50% 94%;
   animation: sway 9s ease-in-out infinite alternate;
+  filter: drop-shadow(0 -1px 0 rgba(255, 250, 236, 0.5)) drop-shadow(0 6px 12px rgba(58, 38, 18, 0.22));
+}
+body.pf-night .tree svg {
+  filter: drop-shadow(0 -1px 0 rgba(176, 186, 255, 0.2)) drop-shadow(0 6px 12px rgba(6, 6, 32, 0.5));
 }
 @keyframes sway {
   from { transform: rotate(-0.9deg); }

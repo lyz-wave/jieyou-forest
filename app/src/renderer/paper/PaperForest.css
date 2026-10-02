@@ -1,0 +1,569 @@
+/* ============================================================
+   Foxglove Hollow · 纸艺微缩剧场 (Paper Theatre Diorama)
+   九层手工剪纸景深堆叠、昼夜吊杆升降机、物理落叶与萤火虫
+   ============================================================ */
+
+:root {
+  --pf-cream: #f3e8d2;
+  --pf-sage: #9bb89b;
+  --pf-moss: #5f7f5b;
+  --pf-teal: #274e52;
+  --pf-ochre: #d9a45b;
+  --pf-orange: #c8642d;
+  --pf-ink: #3b2b1d;
+  --pf-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", "Songti SC", "SimSun", Georgia, serif;
+  --pf-shade: rgba(58, 38, 18, 0.34);
+  --pf-edge: rgba(255, 250, 236, 0.5);
+}
+
+.pf-night,
+body.pf-night {
+  --pf-shade: rgba(6, 6, 32, 0.62);
+  --pf-edge: rgba(176, 186, 255, 0.2);
+}
+
+/* ---------- 纸艺舞台总容器 ---------- */
+.pf-stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+  z-index: 0;
+}
+
+/* ---------- 天空背景 ---------- */
+.pf-sky {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 75% at 70% 22%, #fbf3e1 0%, #f3e8d2 42%, #ecd9b4 100%);
+}
+
+.pf-sky-night {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+  background: radial-gradient(95% 70% at 70% 20%, #3a3f8a 0%, #252a69 36%, #161a45 72%, #10132f 100%);
+}
+
+.pf-night .pf-sky-night,
+body.pf-night .pf-sky-night {
+  opacity: 1;
+}
+
+.pf-sky-grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.16;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+.pf-pins {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1s ease 0.2s;
+}
+
+.pf-night .pf-pins,
+body.pf-night .pf-pins {
+  opacity: 1;
+}
+
+.pf-pins circle {
+  fill: #fff4d6;
+}
+
+.pf-pins .tw {
+  animation: pf-twinkle 3.2s ease-in-out infinite;
+}
+
+@keyframes pf-twinkle {
+  0%, 100% { opacity: 0.95; }
+  50% { opacity: 0.2; }
+}
+
+/* ---------- 图层与投影 ---------- */
+.pf-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+.pf-layer > svg {
+  display: block;
+  overflow: visible;
+}
+
+.pf-cut {
+  filter: drop-shadow(0 calc(var(--sh, 4) * 1px) calc(var(--sh, 4) * 1.3px) var(--pf-shade));
+}
+
+.pf-place > svg {
+  animation: pf-placeIn 0.9s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@keyframes pf-placeIn {
+  from { transform: translateY(7%); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.pf-layer path,
+.pf-layer circle,
+.pf-layer ellipse {
+  transition: fill 0.75s cubic-bezier(0.4, 0, 0.2, 1) var(--d, 0s),
+              opacity 0.75s ease var(--d, 0s),
+              stroke 0.75s ease var(--d, 0s);
+}
+
+.pf-grain {
+  fill: url(#pfGrainPat);
+  opacity: 0.14;
+  pointer-events: none;
+  transition: opacity 0.75s ease;
+}
+
+.pf-night .pf-grain,
+body.pf-night .pf-grain {
+  opacity: 0.07;
+}
+.pf-night .pf-sky-grain,
+body.pf-night .pf-sky-grain {
+  opacity: 0.09;
+}
+
+/* 昼夜颜色方案 */
+.c-far { fill: #dfdec3; } .pf-night .c-far, body.pf-night .c-far { fill: #4a508f; }
+.c-hill { fill: #bdcfb2; } .pf-night .c-hill, body.pf-night .c-hill { fill: #3e4487; }
+.c-roof { fill: #a8bd9c; } .pf-night .c-roof, body.pf-night .c-roof { fill: #353b7b; }
+.c-win { fill: #8aa083; } .pf-night .c-win, body.pf-night .c-win { fill: #ffd57c; }
+.winglow { opacity: 0; } .pf-night .winglow, body.pf-night .winglow { opacity: 1; }
+.c-ridge { fill: #9bb89b; } .pf-night .c-ridge, body.pf-night .c-ridge { fill: #343a7c; }
+.c-meadow { fill: #7e9c74; } .pf-night .c-meadow, body.pf-night .c-meadow { fill: #2b3071; }
+.c-river { fill: #b7d2c8; } .pf-night .c-river, body.pf-night .c-river { fill: #5763ae; }
+.c-ripple { fill: #f1f2e3; } .pf-night .c-ripple, body.pf-night .c-ripple { fill: #b9c1f2; }
+.glint { fill: #fff3c9; opacity: 0; }
+.pf-night .glint, body.pf-night .glint { opacity: 0.95; animation: pf-glint 2.6s ease-in-out infinite; }
+@keyframes pf-glint { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.12; } }
+.c-moss { fill: #5f7f5b; } .pf-night .c-moss, body.pf-night .c-moss { fill: #24295f; }
+.c-teal { fill: #274e52; } .pf-night .c-teal, body.pf-night .c-teal { fill: #1a1d4e; }
+.c-ground { fill: #d9a45b; } .pf-night .c-ground, body.pf-night .c-ground { fill: #352b63; }
+.c-burrow { fill: #4a3019; } .pf-night .c-burrow, body.pf-night .c-burrow { fill: #110e2a; }
+.c-stem { fill: #f0e3c6; } .pf-night .c-stem, body.pf-night .c-stem { fill: #8d86b9; }
+.c-cap { fill: #c8642d; } .pf-night .c-cap, body.pf-night .c-cap { fill: #7b3e6b; }
+.c-dot { fill: #f8efdc; } .pf-night .c-dot, body.pf-night .c-dot { fill: #aef6e4; }
+.c-fern { fill: #5f7f5b; } .pf-night .c-fern, body.pf-night .c-fern { fill: #262d62; }
+.c-fall1 { fill: #c9713a; } .pf-night .c-fall1, body.pf-night .c-fall1 { fill: #5a3766; }
+.c-fall2 { fill: #b98f4c; } .pf-night .c-fall2, body.pf-night .c-fall2 { fill: #443d78; }
+.c-tuft { fill: #8a9a55; } .pf-night .c-tuft, body.pf-night .c-tuft { fill: #2c2a5c; }
+.c-pebble { fill: #e9dcc0; } .pf-night .c-pebble, body.pf-night .c-pebble { fill: #5a5690; }
+.c-fg { fill: #1f4245; } .pf-night .c-fg, body.pf-night .c-fg { fill: #121439; }
+.c-fg2 { fill: #3d6a50; } .pf-night .c-fg2, body.pf-night .c-fg2 { fill: #1b1d4a; }
+.c-bell { fill: #c8642d; } .pf-night .c-bell, body.pf-night .c-bell { fill: #8a4a86; }
+.c-bell2 { fill: #efc27d; } .pf-night .c-bell2, body.pf-night .c-bell2 { fill: #d7a3d8; }
+.c-mat { fill: #efe3c9; } .pf-night .c-mat, body.pf-night .c-mat { fill: #8f8bb6; }
+.c-frame { fill: #1c3739; } .pf-night .c-frame, body.pf-night .c-frame { fill: #0b0c27; }
+.c-fox { fill: #c8642d; } .pf-night .c-fox, body.pf-night .c-fox { fill: #a14f36; }
+.c-foxc { fill: #f6ecd6; } .pf-night .c-foxc, body.pf-night .c-foxc { fill: #d2cbe4; }
+.c-foxd { fill: #3a2b24; } .pf-night .c-foxd, body.pf-night .c-foxd { fill: #17152f; }
+.glowdots { filter: url(#pfSoftGlow); }
+.puff { fill: #e0b673; opacity: 0; } .pf-night .puff, body.pf-night .puff { fill: #9d96cc; }
+
+/* ---------- 悬挂吊杆系统 (Fly-System) ---------- */
+.pf-hang {
+  position: absolute;
+  top: 0;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  transition: transform 1.3s cubic-bezier(0.45, -0.25, 0.2, 1.15);
+  transition-delay: var(--hd, 0s);
+}
+
+.pf-hang .pf-swing {
+  position: relative;
+  transform-origin: 50% 0;
+  animation: pf-swing var(--sd, 5s) ease-in-out infinite alternate;
+  animation-delay: var(--sdl, 0s);
+}
+
+.pf-hang .pf-string {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  margin-left: -0.5px;
+  height: var(--len);
+  background: linear-gradient(rgba(74, 54, 34, 0.25), rgba(74, 54, 34, 0.6));
+}
+
+.pf-night .pf-hang .pf-string,
+body.pf-night .pf-hang .pf-string {
+  background: linear-gradient(rgba(220, 220, 255, 0.08), rgba(220, 220, 255, 0.36));
+}
+
+.pf-hang .pf-obj {
+  position: absolute;
+  left: 50%;
+  top: var(--len);
+  transform: translate(-50%, -6%);
+  filter: drop-shadow(0 5px 6px var(--pf-shade));
+}
+
+.pf-hang .pf-obj svg {
+  display: block;
+  overflow: visible;
+}
+
+.pf-hang.day {
+  transform: none;
+}
+
+.pf-night .pf-hang.day,
+body.pf-night .pf-hang.day {
+  transform: translateY(calc(-1px * var(--up)));
+}
+
+.pf-hang.nite {
+  transform: translateY(calc(-1px * var(--up)));
+}
+
+.pf-night .pf-hang.nite,
+body.pf-night .pf-hang.nite {
+  transform: none;
+}
+
+@keyframes pf-swing {
+  from { transform: rotate(-1.6deg); }
+  to { transform: rotate(1.6deg); }
+}
+
+.pf-halo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 260%;
+  height: 260%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 236, 190, 0.34) 0%, rgba(255, 236, 190, 0.12) 34%, rgba(255, 236, 190, 0) 66%);
+  pointer-events: none;
+}
+
+/* ---------- 纸片落叶与萤火虫 ---------- */
+.pf-leaf {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  filter: drop-shadow(1px 4px 3px var(--pf-shade));
+}
+
+.pf-leaf svg { display: block; }
+.lf-a { fill: #d9a45b; } .pf-night .lf-a, body.pf-night .lf-a { fill: #6c5a8f; }
+.lf-b { fill: #c8642d; } .pf-night .lf-b, body.pf-night .lf-b { fill: #7a4577; }
+.lf-c { fill: #9bb89b; } .pf-night .lf-c, body.pf-night .lf-c { fill: #4a569a; }
+.lf-v { fill: none; stroke: rgba(255, 246, 226, 0.55); stroke-width: 0.7; }
+.pf-night .lf-v, body.pf-night .lf-v { stroke: rgba(210, 210, 255, 0.3); }
+.pf-leaf path { transition: fill 1.2s ease 0.6s; }
+
+#pfFlies { pointer-events: none; }
+
+.pf-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 16vmin rgba(60, 36, 14, 0.22);
+  transition: box-shadow 1.4s ease;
+}
+
+.pf-night .pf-vignette,
+body.pf-night .pf-vignette {
+  box-shadow: inset 0 0 22vmin rgba(2, 2, 20, 0.55);
+}
+
+/* ---------- 狐狸交互按钮 ---------- */
+.pf-fox-btn {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 40%;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.pf-fox-btn:focus-visible {
+  outline: 2px dashed #fff6df;
+  outline-offset: 4px;
+  box-shadow: 0 0 0 6px rgba(39, 78, 82, 0.45);
+}
+
+/* ---------- 悬挂行李标签 (Luggage Tag) ---------- */
+.pf-tag-wrap {
+  position: fixed;
+  top: 0;
+  left: clamp(18px, 4vw, 60px);
+  z-index: 10;
+  transform-origin: 50% 0;
+  will-change: transform;
+  pointer-events: none;
+  filter: drop-shadow(2px 10px 9px var(--pf-shade));
+}
+
+.pf-tag-string {
+  display: block;
+  margin: 0 auto;
+  width: 1px;
+  height: clamp(20px, 4vh, 48px);
+  background: linear-gradient(rgba(74, 54, 34, 0.2), rgba(74, 54, 34, 0.7));
+}
+
+.pf-night .pf-tag-string,
+body.pf-night .pf-tag-string {
+  background: linear-gradient(rgba(230, 230, 255, 0.1), rgba(230, 230, 255, 0.45));
+}
+
+.pf-tag {
+  position: relative;
+  width: clamp(200px, 18vw, 260px);
+  padding: 38px 18px 18px;
+  text-align: center;
+  pointer-events: auto;
+  background: #f8efdb;
+  color: var(--pf-ink);
+  font-family: var(--pf-serif);
+  clip-path: polygon(24% 0, 76% 0, 100% 16%, 100% 100%, 0 100%, 0 16%);
+  transition: background-color 1.2s ease, color 1.2s ease;
+}
+
+.pf-night .pf-tag,
+body.pf-night .pf-tag {
+  background: #e7e1ef;
+  color: #2a2644;
+}
+
+.pf-tag-grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.pf-tag > p,
+.pf-tag > h1,
+.pf-tag > .pf-rule {
+  position: relative;
+}
+
+.pf-tag::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px dashed rgba(122, 78, 40, 0.35);
+  clip-path: polygon(23% 0, 77% 0, 100% 15%, 100% 100%, 0 100%, 0 15%);
+  pointer-events: none;
+}
+
+.pf-tag-hole {
+  position: absolute;
+  left: 50%;
+  top: 13px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: #1f3a3c;
+  box-shadow: 0 0 0 3px var(--pf-ochre), 0 0 0 4px rgba(90, 56, 24, 0.35);
+  transition: background-color 1.2s ease;
+}
+
+.pf-night .pf-tag-hole,
+body.pf-night .pf-tag-hole {
+  background: #141841;
+}
+
+.pf-tag-knot {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  width: 1px;
+  height: 22px;
+  margin-left: -0.5px;
+  background: rgba(74, 54, 34, 0.7);
+}
+
+.pf-night .pf-tag-knot,
+body.pf-night .pf-tag-knot {
+  background: rgba(230, 230, 255, 0.45);
+}
+
+.pf-kicker {
+  margin: 0 0 6px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #9a5526;
+}
+
+.pf-night .pf-kicker,
+body.pf-night .pf-kicker { color: #7b5aa6; }
+
+.pf-tag h1 {
+  margin: 0;
+  font-weight: 500;
+  font-size: clamp(22px, 2.2vw, 28px);
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+}
+
+.pf-tag h1 em {
+  display: block;
+  font-style: italic;
+  color: var(--pf-orange);
+  font-size: 1.05em;
+}
+
+.pf-night .pf-tag h1 em,
+body.pf-night .pf-tag h1 em { color: #8d4a86; }
+
+.pf-tag .pf-sub {
+  margin: 10px auto 0;
+  max-width: 20ch;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #5b4632;
+}
+
+.pf-night .pf-tag .pf-sub,
+body.pf-night .pf-tag .pf-sub { color: #4a4468; }
+
+.pf-rule {
+  display: block;
+  width: 38px;
+  height: 5px;
+  margin: 10px auto 0;
+  background: radial-gradient(circle, var(--pf-moss) 1.2px, transparent 1.6px) 0 50%/8px 5px repeat-x;
+}
+
+/* ---------- 悬浮控制按钮组 ---------- */
+.pf-controls {
+  position: fixed;
+  right: clamp(16px, 3vw, 40px);
+  bottom: clamp(16px, 3vw, 36px);
+  z-index: 100;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.pf-chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 11px;
+  border: 0;
+  font-family: var(--pf-serif);
+  font-size: 14px;
+  color: var(--pf-ink);
+  cursor: pointer;
+  background: #f8efdb;
+  clip-path: polygon(2% 6%, 30% 0, 62% 4%, 99% 1%, 100% 52%, 98% 96%, 64% 100%, 34% 97%, 1% 100%, 0 48%);
+  filter: drop-shadow(0 4px 5px var(--pf-shade));
+  transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1),
+              background-color 1.2s ease,
+              color 1.2s ease;
+}
+
+.pf-chip:hover { transform: translateY(-2px) rotate(-1deg); }
+.pf-chip:active { transform: translateY(1px) scale(0.98); }
+.pf-chip:focus-visible { outline: none; background: #fff7e4; box-shadow: inset 0 0 0 2px var(--pf-orange); }
+
+.pf-chip[aria-pressed="true"],
+.pf-night .pf-chip,
+body.pf-night .pf-chip {
+  background: #e7e1ef;
+  color: #2a2644;
+}
+
+.pf-track {
+  position: relative;
+  width: 46px;
+  height: 24px;
+  border-radius: 12px;
+  background: #d9c7a1;
+  box-shadow: inset 0 2px 3px rgba(80, 50, 20, 0.3);
+  transition: background-color 0.9s ease;
+}
+
+.pf-chip[aria-pressed="true"] .pf-track,
+.pf-night .pf-track,
+body.pf-night .pf-track {
+  background: #3a3f86;
+}
+
+.pf-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  transition: transform 0.7s cubic-bezier(0.5, -0.3, 0.3, 1.35);
+}
+
+.pf-chip[aria-pressed="true"] .pf-knob,
+.pf-night .pf-knob,
+body.pf-night .pf-knob {
+  transform: translateX(22px);
+}
+
+.pf-knob svg {
+  position: absolute;
+  inset: 0;
+  width: 20px;
+  height: 20px;
+  transition: opacity 0.5s ease, transform 0.7s ease;
+}
+
+.pf-knob .k-moon { opacity: 0; transform: rotate(-90deg); }
+.pf-chip[aria-pressed="true"] .pf-knob .k-sun,
+.pf-night .pf-knob .k-sun,
+body.pf-night .pf-knob .k-sun {
+  opacity: 0;
+  transform: rotate(90deg);
+}
+.pf-chip[aria-pressed="true"] .pf-knob .k-moon,
+.pf-night .pf-knob .k-moon,
+body.pf-night .pf-knob .k-moon {
+  opacity: 1;
+  transform: none;
+}
+
+.pf-chip-label { font-style: italic; }
+.pf-chip svg.scissors { width: 18px; height: 18px; }
+
+/* 减少动画 */
+@media (prefers-reduced-motion: reduce) {
+  .pf-place > svg { animation: none; }
+  .pf-hang .pf-swing, .pf-pins .tw { animation: none; }
+  .pf-hang { transition-duration: 0.6s; }
+}
