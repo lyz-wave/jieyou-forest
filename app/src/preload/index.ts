@@ -1,35 +1,38 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import { CH, type ForestApi, type InvokeChannel, type SendChannel } from '../shared/ipc'
 
-// 白名单：只暴露架构文档 §2 列出的通道，不给渲染进程任何通用 invoke 出口。
-const invoke = <T>(channel: string, payload?: unknown): Promise<T> =>
+// 白名单：只暴露契约里列出的通道，不给渲染进程任何通用 invoke 出口。
+// 形参类型是 CH 值的联合，不是 string——写裸字面量会编译不过。
+const invoke = <T>(channel: InvokeChannel, payload?: unknown): Promise<T> =>
   ipcRenderer.invoke(channel, payload) as Promise<T>
 
-const subscribe = <P>(channel: string, cb: (payload: P) => void): (() => void) => {
+const subscribe = <P>(channel: SendChannel, cb: (p: P) => void): (() => void) => {
   const listener = (_e: unknown, payload: P): void => cb(payload)
   ipcRenderer.on(channel, listener)
   return () => ipcRenderer.removeListener(channel, listener)
 }
 
-const api = {
-  submit: (p: { input: string; emotion?: string; intensity?: string }) => invoke('session:submit', p),
-  retryReceive: (p: { sessionId: string }) => invoke('session:retryReceive', p),
-  correct: (p: { sessionId: string }) => invoke('safety:correct', p),
-  choosePath: (p: { sessionId: string; path: 'rest' | 'reflect' }) => invoke('path:choose', p),
-  consent: (p: { sessionId: string }) => invoke('reflect:consent', p),
-  cancelReflect: (p: { sessionId: string }) => invoke('reflect:cancel', p),
-  saveRing: (p: unknown) => invoke('ring:save', p),
-  listRings: () => invoke('ring:list'),
-  deleteRing: (p: { id: string }) => invoke('ring:delete', p),
-  saveReview: (p: unknown) => invoke('review:save', p),
-  clearAll: () => invoke('data:clearAll'),
-  demoReset: () => invoke('demo:reset'),
+// 标注成 ForestApi：少实现一个方法、或签名对不上，这里就编译不过。
+const api: ForestApi = {
+  submit: (p) => invoke(CH.invoke.submit, p),
+  retryReceive: (p) => invoke(CH.invoke.retryReceive, p),
+  correct: (p) => invoke(CH.invoke.correct, p),
+  choosePath: (p) => invoke(CH.invoke.choosePath, p),
+  consent: (p) => invoke(CH.invoke.consent, p),
+  cancelReflect: (p) => invoke(CH.invoke.cancelReflect, p),
+  saveRing: (p) => invoke(CH.invoke.saveRing, p),
+  listRings: () => invoke(CH.invoke.listRings),
+  getRing: (p) => invoke(CH.invoke.getRing, p),
+  deleteRing: (p) => invoke(CH.invoke.deleteRing, p),
+  saveReview: (p) => invoke(CH.invoke.saveReview, p),
+  clearAll: () => invoke(CH.invoke.clearAll),
+  demoReset: () => invoke(CH.invoke.demoReset),
 
-  onReceive: (cb: (p: { sessionId: string; delta: string; done: boolean }) => void) => subscribe('stream:receive', cb),
-  onReflection: (cb: (p: { sessionId: string; card: string; delta: string; done: boolean }) => void) => subscribe('stream:reflection', cb),
-  onVerdict: (cb: (p: { sessionId: string; level: string }) => void) => subscribe('safety:verdict', cb),
-  onState: (cb: (p: { sessionId: string; status: string }) => void) => subscribe('state:changed', cb),
-  onError: (cb: (p: { sessionId: string; stage: string; code: string }) => void) => subscribe('stage:error', cb),
+  onReceive: (cb) => subscribe(CH.send.receive, cb),
+  onReflection: (cb) => subscribe(CH.send.reflection, cb),
+  onVerdict: (cb) => subscribe(CH.send.verdict, cb),
+  onState: (cb) => subscribe(CH.send.state, cb),
+  onError: (cb) => subscribe(CH.send.error, cb),
 }
 
 contextBridge.exposeInMainWorld('forest', api)
-export type ForestApi = typeof api

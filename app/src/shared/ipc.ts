@@ -1,0 +1,124 @@
+import type {
+  Capabilities, ReflectionCardId, ReviewDraft, RingDraft, RingRow, SafetyLevel, SessionPath, SessionStatus,
+} from './types'
+
+/**
+ * 主进程与渲染进程之间的唯一契约。
+ *
+ * 通道名只在这里写一次：preload 与 main/ipc.ts 都引用 CH，
+ * 任何一侧漏改都会在类型检查阶段报错，而不是等到运行时才发现通道不存在。
+ */
+export const CH = {
+  invoke: {
+    submit: 'session:submit',
+    retryReceive: 'session:retryReceive',
+    correct: 'safety:correct',
+    choosePath: 'path:choose',
+    consent: 'reflect:consent',
+    cancelReflect: 'reflect:cancel',
+    saveRing: 'ring:save',
+    listRings: 'ring:list',
+    getRing: 'ring:get',
+    deleteRing: 'ring:delete',
+    saveReview: 'review:save',
+    clearAll: 'data:clearAll',
+    demoReset: 'demo:reset',
+  },
+  send: {
+    receive: 'stream:receive',
+    reflection: 'stream:reflection',
+    verdict: 'safety:verdict',
+    state: 'state:changed',
+    error: 'stage:error',
+  },
+} as const
+
+/** 通道字符串的联合类型。两侧的发送/订阅形参都用它，
+ *  这样写裸字面量（而不是引用 CH）会直接编译不过。 */
+export type InvokeChannel = (typeof CH.invoke)[keyof typeof CH.invoke]
+export type SendChannel = (typeof CH.send)[keyof typeof CH.send]
+
+export interface SubmitInput {
+  input: string
+  emotion?: string
+  intensity?: string
+}
+export interface SubmitResult {
+  sessionId: string
+  capabilities: Capabilities
+  banner: string | null
+}
+export interface CorrectResult {
+  level: SafetyLevel
+  capabilities: Capabilities
+}
+export interface ConsentResult {
+  ok: boolean
+  reason?: string
+}
+export interface StatusResult {
+  status: SessionStatus
+}
+export interface BannerResult {
+  banner: string | null
+}
+export interface DeleteResult {
+  deleted: boolean
+  stillReadable: boolean
+}
+export interface EmptyResult {
+  empty: boolean
+}
+export interface SaveRingInput {
+  sessionId: string
+  idempotencyKey: string
+  draft: RingDraft
+}
+
+export interface ReceiveChunk {
+  sessionId: string
+  delta: string
+  done: boolean
+}
+export interface ReflectionChunk {
+  sessionId: string
+  card: ReflectionCardId
+  delta: string
+  done: boolean
+}
+export interface VerdictEvent {
+  sessionId: string
+  level: SafetyLevel
+}
+export interface StateEvent {
+  sessionId: string
+  status: SessionStatus
+}
+export interface ErrorEvent {
+  sessionId: string
+  stage: string
+  code: string
+}
+
+/** 渲染进程能看到的全部能力。preload 必须完整实现它，缺一个方法就编译不过。 */
+export interface ForestApi {
+  submit(p: SubmitInput): Promise<SubmitResult>
+  retryReceive(p: { sessionId: string }): Promise<BannerResult>
+  correct(p: { sessionId: string }): Promise<CorrectResult>
+  choosePath(p: { sessionId: string; path: SessionPath }): Promise<StatusResult>
+  consent(p: { sessionId: string }): Promise<ConsentResult>
+  cancelReflect(p: { sessionId: string }): Promise<StatusResult>
+  saveRing(p: SaveRingInput): Promise<{ ringId: string }>
+  listRings(): Promise<RingRow[]>
+  getRing(p: { id: string }): Promise<RingRow | undefined>
+  deleteRing(p: { id: string }): Promise<DeleteResult>
+  saveReview(p: { ringId: string; draft: ReviewDraft }): Promise<{ reviewId: string }>
+  clearAll(): Promise<EmptyResult>
+  demoReset(): Promise<EmptyResult>
+
+  onReceive(cb: (p: ReceiveChunk) => void): () => void
+  onReflection(cb: (p: ReflectionChunk) => void): () => void
+  onVerdict(cb: (p: VerdictEvent) => void): () => void
+  onState(cb: (p: StateEvent) => void): () => void
+  onError(cb: (p: ErrorEvent) => void): () => void
+}

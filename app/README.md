@@ -26,6 +26,12 @@ pnpm dev
 | `pnpm build` | 只构建，不打包 |
 | `pnpm dist` | 打出 .app，产物在 release/ |
 
+## 代码放哪
+
+- `src/shared/ipc.ts` —— **主进程与渲染进程之间的唯一契约**。通道名只在这里写一次，两侧都引用它；改一个通道名会让 `main/ipc.ts` 与 `preload/index.ts` 同时编译报错。
+- `src/main/` —— 闸门、编排、存储。渲染进程不发网络请求、不碰数据库、不做安全判断。
+- `src/renderer/scenes/` —— 四幕各一个组件；`cards/` 是两张休息卡；`tree/` 是常驻的树。状态与动作集中在 `useSession.ts`，场景组件只负责画。
+
 ## 现在就能验证的事
 
 模型是可选出站的（架构文档 §1）。`src/main/model/client.ts` 在没有 `FOREST_API_KEY` / `DEEPSEEK_API_KEY` 时整体禁用，此时：
@@ -48,3 +54,7 @@ FOREST_API_KEY=sk-xxx pnpm dev
 | `src/main/store/store.test.ts` | 保存幂等、行动年轮必填、删除可验证、清空可校验 |
 | `src/main/orchestrate/session.test.ts` | 没有同意记录就没有认知挑战、未保存不落库 |
 | `src/main/orchestrate/reflection.test.ts` | 引用必须逐字命中、思考层不兜底 |
+| `src/shared/ipc.test.ts` | 通道名不重复、不跨 invoke/send 撞名、命名形状统一 |
+| `src/renderer/App.test.tsx` | 四幕逐幕走查：休息路径全程、同意门槛、未完成不填兜底、L1 只出危机支持 |
+
+其中 `App.test.tsx` 用 happy-dom 跑，配一个只实现契约、不碰 Electron 的假 API，所以它和主进程测试一样快（整个套件 0.5 秒）。

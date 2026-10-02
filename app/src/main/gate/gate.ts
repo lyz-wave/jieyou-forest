@@ -1,4 +1,7 @@
-import type { Capabilities, SafetyLevel } from '../../shared/types'
+import type { SafetyLevel } from '../../shared/types'
+
+// 能力映射住在 shared（渲染进程也要用同一份），这里只把它转出去。
+export { capabilitiesFor } from '../../shared/capabilities'
 
 export interface GateRule {
   id: string
@@ -63,16 +66,5 @@ export function applyCorrection(result: GateResult): GateResult {
     hits: result.hits,
     reasonCode: 'corrected',
     corrected: true,
-  }
-}
-
-export function capabilitiesFor(level: SafetyLevel): Capabilities {
-  switch (level) {
-    case 'L1':
-      return { canRest: false, canReflect: false, canShowCrisis: true }
-    case 'L2':
-      return { canRest: true, canReflect: false, canShowCrisis: false }
-    case 'L3':
-      return { canRest: true, canReflect: true, canShowCrisis: false }
   }
 }

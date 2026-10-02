@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
-import type { ReviewDraft, RingDraft } from '../../shared/types'
+import type { ReviewDraft, RingDraft, RingRow } from '../../shared/types'
 
 export interface SaveSessionInput {
   id: string
@@ -100,12 +100,12 @@ export function saveRing(
   return id
 }
 
-export function listRings(db: Database.Database): unknown[] {
-  return db.prepare('SELECT * FROM ring ORDER BY created_at DESC').all()
+export function listRings(db: Database.Database): RingRow[] {
+  return db.prepare('SELECT * FROM ring ORDER BY created_at DESC').all() as RingRow[]
 }
 
-export function getRing(db: Database.Database, id: string): unknown {
-  return db.prepare('SELECT * FROM ring WHERE id = ?').get(id)
+export function getRing(db: Database.Database, id: string): RingRow | undefined {
+  return db.prepare('SELECT * FROM ring WHERE id = ?').get(id) as RingRow | undefined
 }
 
 /** 删除后列表与详情都必须读不到（PRD F06 验收）。 */

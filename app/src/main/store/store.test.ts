@@ -34,7 +34,7 @@ describe('存储层', () => {
 
   it('不打开保存原文时不写正文', () => {
     const id = saveRing(db, 's1', { type: 'support', userNote: '一句观察', saveOriginal: false, originalText: '我写了很长一段' }, 'k-3')
-    expect((getRing(db, id) as { original_text: string | null }).original_text).toBeNull()
+    expect(getRing(db, id)?.original_text).toBeNull()
   })
 
   it('删除后列表与详情都读不到', () => {
