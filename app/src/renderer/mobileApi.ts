@@ -3,9 +3,13 @@ import type {
   ConsentResult,
   CorrectResult,
   DeleteResult,
+  DiscussionChunk,
+  DiscussInput,
+  DiscussResult,
   EmptyResult,
   ErrorEvent,
   ForestApi,
+  ModelConfigDto,
   ReceiveChunk,
   ReflectionChunk,
   SaveRingInput,
@@ -13,14 +17,15 @@ import type {
   StatusResult,
   SubmitInput,
   SubmitResult,
+  TestModelResult,
   VerdictEvent,
 } from '../shared/ipc'
 import type { ReviewDraft, RingRow } from '../shared/types'
 import { capabilitiesFor } from '../shared/capabilities'
 import { findResonantRing } from '../shared/resonance'
 
-
 const STORAGE_KEY = 'jieyou_rings_v1'
+const CONFIG_KEY = 'jieyou_model_config_v1'
 
 function loadSavedRings(): RingRow[] {
   try {
@@ -40,6 +45,28 @@ function saveRingsToStorage(rings: RingRow[]): void {
   } catch {}
 }
 
+function loadSavedConfig(): ModelConfigDto {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(CONFIG_KEY)
+      if (raw) return JSON.parse(raw)
+    }
+  } catch {}
+  return {
+    baseUrl: 'https://api.deepseek.com/v1',
+    model: 'deepseek-chat',
+    apiKey: '',
+  }
+}
+
+function saveConfigToStorage(cfg: ModelConfigDto): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg))
+    }
+  } catch {}
+}
+
 /**
  * 移动端/无 Electron 环境的纯本地适配器。
  * 允许在 iOS WKWebView / Capacitor / 独立浏览器中直接完整体验全部业务流程与年轮持久化。
@@ -47,11 +74,13 @@ function saveRingsToStorage(rings: RingRow[]): void {
 export function createMobileForestApi(): ForestApi {
   const receiveListeners = new Set<(p: ReceiveChunk) => void>()
   const reflectionListeners = new Set<(p: ReflectionChunk) => void>()
+  const discussionListeners = new Set<(p: DiscussionChunk) => void>()
   const verdictListeners = new Set<(p: VerdictEvent) => void>()
   const stateListeners = new Set<(p: StateEvent) => void>()
   const errorListeners = new Set<(p: ErrorEvent) => void>()
 
   let rings: RingRow[] = loadSavedRings()
+  let modelConfig: ModelConfigDto = loadSavedConfig()
   let currentInput = ''
 
   return {
@@ -73,7 +102,6 @@ export function createMobileForestApi(): ForestApi {
       const resonance = findResonantRing(p.input, rings)
       return { sessionId, capabilities: caps, banner: null, resonance }
     },
-
 
     async retryReceive(): Promise<BannerResult> {
       return { banner: '这是内置的轻柔陪伴提示，山林一直在倾听你的心声。' }
@@ -185,6 +213,129 @@ export function createMobileForestApi(): ForestApi {
       return { empty: true }
     },
 
+    async getModelConfig(): Promise<ModelConfigDto> {
+      return { ...modelConfig }
+    },
+
+    async saveModelConfig(cfg: ModelConfigDto): Promise<{ ok: boolean }> {
+      modelConfig = { ...cfg }
+      saveConfigToStorage(modelConfig)
+      return { ok: true }
+    },
+
+    async testModelConfig(cfg: ModelConfigDto): Promise<TestModelResult> {
+      if (!cfg.apiKey?.trim()) {
+        return { ok: false, error: '请先填写 API Key' }
+      }
+      const cleanUrl = cfg.baseUrl.trim().replace(/\/+$/, '')
+      const url = cleanUrl.endsWith('/chat/completions')
+        ? cleanUrl
+        : cleanUrl.endsWith('/v1')
+          ? cleanUrl + '/chat/completions'
+          : cleanUrl + '/v1/chat/completions'
+      const start = Date.now()
+      try {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 12000)
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer ' + cfg.apiKey.trim(),
+          },
+          body: JSON.stringify({
+            model: cfg.model.trim() || 'deepseek-chat',
+            messages: [{ role: 'user', content: 'hi' }],
+            max_tokens: 5,
+          }),
+          signal: controller.signal,
+        })
+        clearTimeout(timer)
+        const latencyMs = Date.now() - start
+        if (!res.ok) {
+          return { ok: false, latencyMs, error: `HTTP ${res.status}: ${res.statusText}` }
+        }
+        return { ok: true, latencyMs, message: `连接成功，延迟 ${latencyMs}ms` }
+      } catch (err: any) {
+        return { ok: false, latencyMs: Date.now() - start, error: err.message || '网络连接失败' }
+      }
+    },
+
+    async discuss(p: DiscussInput): Promise<DiscussResult> {
+      const fallbackReplies: Record<string, string> = {
+        guardian: '我注意到你的疲惫与认真。你已经在承担很多了。如果现在允许自己放下 10% 的自责，你最想先给自己的边界留出什么空间？',
+        explorer: '如果把这次的阻碍视作一个提示信号而非判决，你觉得它最想引导你发现哪种新的应对方式？哪怕只是一个小试验？',
+        outsider: '跳出眼前的焦虑，设想一年后的你坐在安静的书房里回望今天，你最想对现在的自己说一句什么鼓励的话？',
+        mirror: '当我们感到失控时，往往把“最坏的猜想”误认成了“必然的现实”。试问：眼前切实发生的事实，与你担心的未来，边界在哪里？',
+      }
+      const fallbackReply = fallbackReplies[p.perspective] || '深呼吸，给自己的内心留一扇窗。你现在最需要的一份安心是什么？'
+
+      if (!modelConfig.apiKey?.trim()) {
+        setTimeout(() => {
+          discussionListeners.forEach((cb) =>
+            cb({
+              sessionId: p.sessionId,
+              perspective: p.perspective,
+              delta: fallbackReply,
+              done: true,
+            }),
+          )
+        }, 300)
+        return { ok: true, reply: fallbackReply }
+      }
+
+      try {
+        const cleanUrl = modelConfig.baseUrl.trim().replace(/\/+$/, '')
+        const url = cleanUrl.endsWith('/chat/completions')
+          ? cleanUrl
+          : cleanUrl.endsWith('/v1')
+            ? cleanUrl + '/chat/completions'
+            : cleanUrl + '/v1/chat/completions'
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer ' + modelConfig.apiKey.trim(),
+          },
+          body: JSON.stringify({
+            model: modelConfig.model.trim() || 'deepseek-chat',
+            messages: [
+              {
+                role: 'system',
+                content: `你正在以【${p.perspectiveTitle}】视角与用户展开苏格拉底式深入探讨。言简意赅控制在120字内，提出一个启发性的反问，促使自我觉察与行动，避免情绪反刍。`,
+              },
+              ...(p.history || []),
+              { role: 'user', content: p.userQuery },
+            ],
+          }),
+        })
+        if (!res.ok) throw new Error('HTTP ' + res.status)
+        const data = await res.json()
+        const content = data.choices?.[0]?.message?.content || fallbackReply
+        discussionListeners.forEach((cb) =>
+          cb({
+            sessionId: p.sessionId,
+            perspective: p.perspective,
+            delta: content,
+            done: true,
+          }),
+        )
+        return { ok: true, reply: content }
+      } catch {
+        setTimeout(() => {
+          discussionListeners.forEach((cb) =>
+            cb({
+              sessionId: p.sessionId,
+              perspective: p.perspective,
+              delta: fallbackReply,
+              done: true,
+            }),
+          )
+        }, 200)
+        return { ok: true, reply: fallbackReply }
+      }
+    },
+
     onReceive(cb): () => void {
       receiveListeners.add(cb)
       return () => receiveListeners.delete(cb)
@@ -192,6 +343,10 @@ export function createMobileForestApi(): ForestApi {
     onReflection(cb): () => void {
       reflectionListeners.add(cb)
       return () => reflectionListeners.delete(cb)
+    },
+    onDiscussionDelta(cb): () => void {
+      discussionListeners.add(cb)
+      return () => discussionListeners.delete(cb)
     },
     onVerdict(cb): () => void {
       verdictListeners.add(cb)

@@ -23,15 +23,21 @@ export const CH = {
     saveReview: 'review:save',
     clearAll: 'data:clearAll',
     demoReset: 'demo:reset',
+    getModelConfig: 'config:getModel',
+    saveModelConfig: 'config:saveModel',
+    testModelConfig: 'config:testModel',
+    discuss: 'reflect:discuss',
   },
   send: {
     receive: 'stream:receive',
     reflection: 'stream:reflection',
+    discussionDelta: 'stream:discussionDelta',
     verdict: 'safety:verdict',
     state: 'state:changed',
     error: 'stage:error',
   },
 } as const
+
 
 /** 通道字符串的联合类型。两侧的发送/订阅形参都用它，
  *  这样写裸字面量（而不是引用 CH）会直接编译不过。 */
@@ -99,6 +105,47 @@ export interface SaveRingInput {
   draft: RingDraft
 }
 
+export interface ModelConfigDto {
+  apiKey?: string
+  baseUrl: string
+  model: string
+  receiveTimeoutMs?: number
+  reflectTimeoutMs?: number
+}
+
+export interface TestModelResult {
+  ok: boolean
+  message?: string
+  error?: string
+  latencyMs?: number
+}
+
+export interface DiscussMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface DiscussInput {
+  sessionId: string
+  perspective: ReflectionCardId
+  perspectiveTitle: string
+  userQuery: string
+  history?: DiscussMessage[]
+}
+
+export interface DiscussResult {
+  ok: boolean
+  reply?: string
+  error?: string
+}
+
+export interface DiscussionChunk {
+  sessionId: string
+  perspective: ReflectionCardId
+  delta: string
+  done: boolean
+}
+
 export interface ReceiveChunk {
   sessionId: string
   delta: string
@@ -139,10 +186,16 @@ export interface ForestApi {
   saveReview(p: { ringId: string; draft: ReviewDraft }): Promise<{ reviewId: string }>
   clearAll(): Promise<EmptyResult>
   demoReset(): Promise<EmptyResult>
+  getModelConfig(): Promise<ModelConfigDto>
+  saveModelConfig(cfg: ModelConfigDto): Promise<{ ok: boolean }>
+  testModelConfig(cfg: ModelConfigDto): Promise<TestModelResult>
+  discuss(p: DiscussInput): Promise<DiscussResult>
 
   onReceive(cb: (p: ReceiveChunk) => void): () => void
   onReflection(cb: (p: ReflectionChunk) => void): () => void
+  onDiscussionDelta(cb: (p: DiscussionChunk) => void): () => void
   onVerdict(cb: (p: VerdictEvent) => void): () => void
   onState(cb: (p: StateEvent) => void): () => void
   onError(cb: (p: ErrorEvent) => void): () => void
 }
+

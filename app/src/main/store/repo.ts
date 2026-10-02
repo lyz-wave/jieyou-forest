@@ -151,3 +151,15 @@ export function isDatabaseEmpty(db: Database.Database): boolean {
     (t) => (db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get() as { n: number }).n === 0,
   )
 }
+
+export function getConfig(db: Database.Database, key: string): string | undefined {
+  const row = db.prepare('SELECT value FROM app_config WHERE key = ?').get(key) as { value: string } | undefined
+  return row?.value
+}
+
+export function setConfig(db: Database.Database, key: string, value: string): void {
+  db.prepare(
+    'INSERT INTO app_config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+  ).run(key, value)
+}
+

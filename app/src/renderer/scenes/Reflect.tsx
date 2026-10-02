@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import type { ReflectionCardId } from '../../shared/types'
 import type { SessionController } from '../useSession'
+import DiscussDrawer from './DiscussDrawer'
 
 const PANELS: Array<[ReflectionCardId, string, string]> = [
   ['guardian', '守护者', '守护者反问：你真正想保护的核心需求或边界是什么？'],
@@ -8,9 +10,25 @@ const PANELS: Array<[ReflectionCardId, string, string]> = [
   ['mirror', '折返镜', '重构之镜：换一个更具建设性的思考角度'],
 ]
 
-
 export default function Reflect({ s }: { s: SessionController }) {
   const analysis = s.analysis
+  const [activeDiscuss, setActiveDiscuss] = useState<{
+    perspective: ReflectionCardId
+    title: string
+    socratic: string
+  } | null>(null)
+
+  const handleOpenDiscuss = (perspective: ReflectionCardId, title: string, socratic: string) => {
+    setActiveDiscuss({ perspective, title, socratic })
+  }
+
+  const handleSaveInsight = (insightText: string) => {
+    s.adoptExperiment({
+      action: insightText,
+      observableCriterion: '在多轮苏格拉底推敲后明确了新的内心边界与行动',
+      estimatedMinutes: 5,
+    })
+  }
 
   return (
     <div className="reflect-container">
@@ -61,14 +79,37 @@ export default function Reflect({ s }: { s: SessionController }) {
       {PANELS.map(([key, defaultTitle, defaultSocratic]) => {
         const socratic = analysis?.socraticQuestions?.[key as keyof typeof analysis.socraticQuestions] || defaultSocratic
         return (
-          <div className="card" key={key} style={{ marginBottom: 14, padding: '18px 20px' }}>
-            <div style={{ marginBottom: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>
-                {defaultTitle}
-              </span>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: '#3d6148', fontWeight: 600 }}>
-                💡 {socratic}
-              </p>
+          <div className="card" key={key} style={{ marginBottom: 14, padding: '18px 20px', position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+              <div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>
+                  {defaultTitle}
+                </span>
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#3d6148', fontWeight: 600 }}>
+                  💡 {socratic}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="chip"
+                onClick={() => handleOpenDiscuss(key, defaultTitle, socratic)}
+                style={{
+                  fontSize: 12,
+                  padding: '4px 10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  background: 'rgba(74, 141, 92, 0.12)',
+                  color: '#2d6a3f',
+                  fontWeight: 600,
+                  border: '1px solid rgba(74, 141, 92, 0.3)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  marginLeft: 8,
+                }}
+              >
+                <span>💬 深入推敲</span>
+              </button>
             </div>
             <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.6, color: 'var(--text)' }}>
               {s.cards[key] || '……'}
@@ -121,7 +162,19 @@ export default function Reflect({ s }: { s: SessionController }) {
           暂时不留
         </button>
       </div>
+
+      {/* 专属深聊抽屉 */}
+      {activeDiscuss && (
+        <DiscussDrawer
+          isOpen={Boolean(activeDiscuss)}
+          onClose={() => setActiveDiscuss(null)}
+          perspective={activeDiscuss.perspective}
+          perspectiveTitle={activeDiscuss.title}
+          initialQuestion={activeDiscuss.socratic}
+          sessionId={s.sessionId}
+          onSaveInsight={handleSaveInsight}
+        />
+      )}
     </div>
   )
 }
-

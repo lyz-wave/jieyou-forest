@@ -659,6 +659,40 @@ body.pf-night .wood-chipping-box {
 .wood-chip-2 { top: 50%; left: 50%; --chip-dest: translate(-50px, 45px); --chip-rot: 140deg; }
 .wood-chip-3 { top: 50%; left: 50%; --chip-dest: translate(55px, 50px); --chip-rot: -160deg; }
 
+/* ---------- 宣泄解压小游戏：乱麻理顺 / 禅音木鱼 / 呼吸萌芽 ---------- */
+.untangle-game-box,
+.wooden-fish-box,
+.breathing-tree-box {
+  background: rgba(254, 250, 242, 0.9);
+  border: 1px solid rgba(220, 206, 184, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 24px -10px rgba(78, 56, 32, 0.16);
+  border-radius: var(--r-md);
+}
+
+body.pf-night .untangle-game-box,
+body.pf-night .wooden-fish-box,
+body.pf-night .breathing-tree-box {
+  background: rgba(26, 30, 68, 0.88);
+  border-color: rgba(140, 155, 210, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 12px 30px -10px rgba(0, 0, 0, 0.55);
+}
+
+@keyframes ripplePing {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes floatUpFade {
+  0% { transform: translate(-50%, 0) scale(0.85); opacity: 0; }
+  25% { transform: translate(-50%, -15px) scale(1.05); opacity: 1; }
+  100% { transform: translate(-50%, -48px) scale(0.95); opacity: 0; }
+}
+
+
 /* ---------- 木桩截面同心年轮盘与详情卡片 ---------- */
 
 .trunk-disc-container {
@@ -724,6 +758,64 @@ body.pf-night .trunk-detail-card {
   background: rgba(26, 36, 46, 0.9);
   border-color: rgba(90, 130, 150, 0.45);
   box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- 语音输入波形与动效 ---------- */
+.voice-wave-anim {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 14px;
+}
+
+.wave-bar {
+  display: inline-block;
+  width: 2.5px;
+  background: #2d6a3f;
+  border-radius: 2px;
+  animation: waveBar 0.9s ease-in-out infinite alternate;
+}
+
+.wave-bar.b1 { height: 8px; animation-delay: 0.1s; }
+.wave-bar.b2 { height: 14px; animation-delay: 0.3s; }
+.wave-bar.b3 { height: 10px; animation-delay: 0.5s; }
+
+@keyframes waveBar {
+  0% { transform: scaleY(0.4); opacity: 0.7; }
+  100% { transform: scaleY(1.2); opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+
+/* ---------- 模态框与推敲抽屉暗色适配 ---------- */
+body.pf-night .settings-modal-card {
+  background: rgba(22, 28, 25, 0.95);
+  border-color: rgba(70, 110, 85, 0.5);
+  color: #e5ece6;
+}
+
+body.pf-night .settings-modal-card input {
+  background: rgba(14, 18, 16, 0.85) !important;
+  color: #e5ece6 !important;
+  border-color: rgba(60, 95, 75, 0.5) !important;
+}
+
+body.pf-night .discuss-drawer-content {
+  background: rgba(22, 28, 25, 0.96) !important;
+  border-left-color: rgba(70, 110, 85, 0.5) !important;
+}
+
+body.pf-night .discuss-drawer-content > div:first-child {
+  background: rgba(18, 24, 21, 0.8) !important;
+}
+
+body.pf-night .discuss-drawer-content input {
+  background: rgba(14, 18, 16, 0.85) !important;
+  color: #e5ece6 !important;
+  border-color: rgba(60, 95, 75, 0.5) !important;
 }
 
 /* ---------- 减少动画 ---------- */

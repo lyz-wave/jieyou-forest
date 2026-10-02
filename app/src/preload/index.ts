@@ -27,12 +27,18 @@ const api: ForestApi = {
   saveReview: (p) => invoke(CH.invoke.saveReview, p),
   clearAll: () => invoke(CH.invoke.clearAll),
   demoReset: () => invoke(CH.invoke.demoReset),
+  getModelConfig: () => invoke(CH.invoke.getModelConfig),
+  saveModelConfig: (cfg) => invoke(CH.invoke.saveModelConfig, cfg),
+  testModelConfig: (cfg) => invoke(CH.invoke.testModelConfig, cfg),
+  discuss: (p) => invoke(CH.invoke.discuss, p),
 
   onReceive: (cb) => subscribe(CH.send.receive, cb),
   onReflection: (cb) => subscribe(CH.send.reflection, cb),
+  onDiscussionDelta: (cb) => subscribe(CH.send.discussionDelta, cb),
   onVerdict: (cb) => subscribe(CH.send.verdict, cb),
   onState: (cb) => subscribe(CH.send.state, cb),
   onError: (cb) => subscribe(CH.send.error, cb),
 }
+
 
 contextBridge.exposeInMainWorld('forest', api)

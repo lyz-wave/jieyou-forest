@@ -1,9 +1,9 @@
 import { app, ipcMain, type BrowserWindow } from 'electron'
 import { join } from 'node:path'
-import { CH, type SaveRingInput, type SendChannel, type SubmitInput } from '../shared/ipc'
+import { CH, type DiscussInput, type ModelConfigDto, type SaveRingInput, type SendChannel, type SubmitInput } from '../shared/ipc'
 import rules from './gate/rules.json'
 import { applyCorrection, capabilitiesFor, evaluateGate, type RulesFile } from './gate/gate'
-import { createModelClient, loadConfig, type ModelClient } from './model/client'
+import { createModelClient, loadConfig, testConnection, type ModelClient } from './model/client'
 import { runReceive } from './orchestrate/receive'
 import { runReflection, type ThreeViews } from './orchestrate/reflection'
 import { canEnterReflection, SessionMemory } from './orchestrate/session'
@@ -25,7 +25,14 @@ let ctx: Context | null = null
 
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
   const db = openDatabase(join(app.getPath('userData'), 'forest.db'))
-  ctx = { memory: new SessionMemory(), db, model: createModelClient(loadConfig()) }
+  let effectiveConfig = loadConfig()
+  const savedConfigRaw = repo.getConfig(db, 'model_config')
+  if (savedConfigRaw) {
+    try {
+      effectiveConfig = { ...effectiveConfig, ...JSON.parse(savedConfigRaw) }
+    } catch {}
+  }
+  ctx = { memory: new SessionMemory(), db, model: createModelClient(effectiveConfig) }
 
   // 形参类型是 CH 值的联合：这里写裸字面量会编译不过
   const send = (channel: SendChannel, payload: unknown): void => {
@@ -191,6 +198,85 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     const c = must()
     repo.clearAll(c.db)
     return { empty: repo.isDatabaseEmpty(c.db) }
+  })
+
+  ipcMain.handle(CH.invoke.getModelConfig, () => {
+    const c = must()
+    const raw = repo.getConfig(c.db, 'model_config')
+    if (raw) {
+      try {
+        return JSON.parse(raw)
+      } catch {}
+    }
+    return loadConfig()
+  })
+
+  ipcMain.handle(CH.invoke.saveModelConfig, (_e, cfg: ModelConfigDto) => {
+    const c = must()
+    repo.setConfig(c.db, 'model_config', JSON.stringify(cfg))
+    c.model = createModelClient({
+      apiKey: cfg.apiKey,
+      baseUrl: cfg.baseUrl,
+      model: cfg.model,
+      receiveTimeoutMs: cfg.receiveTimeoutMs ?? 45_000,
+      reflectTimeoutMs: cfg.reflectTimeoutMs ?? 30_000,
+    })
+    return { ok: true }
+  })
+
+  ipcMain.handle(CH.invoke.testModelConfig, async (_e, cfg: ModelConfigDto) => {
+    return await testConnection({
+      apiKey: cfg.apiKey,
+      baseUrl: cfg.baseUrl,
+      model: cfg.model,
+      receiveTimeoutMs: cfg.receiveTimeoutMs ?? 45_000,
+      reflectTimeoutMs: cfg.reflectTimeoutMs ?? 30_000,
+    })
+  })
+
+  ipcMain.handle(CH.invoke.discuss, async (_e, payload: DiscussInput) => {
+    const c = must()
+    if (!c.model.available) {
+      const fallbackReplies: Record<string, string> = {
+        guardian: '我注意到你的疲惫与认真。你已经在承担很多了。如果现在允许自己放下 10% 的自责，你最想先给自己的边界留出什么空间？',
+        explorer: '如果把这次的阻碍视作一个提示信号而非判决，你觉得它最想引导你发现哪种新的应对方式？哪怕只是一个小试验？',
+        outsider: '跳出眼前的焦虑，设想一年后的你坐在安静的书房里回望今天，你最想对现在的自己说一句什么鼓励的话？',
+        mirror: '当我们感到失控时，往往把“最坏的猜想”误认成了“必然的现实”。试问：眼前切实发生的事实，与你担心的未来，边界在哪里？',
+      }
+      const fallbackReply = fallbackReplies[payload.perspective] || '深呼吸，给自己的内心留一扇窗。你现在最需要的一份安心是什么？'
+      send(CH.send.discussionDelta, {
+        sessionId: payload.sessionId,
+        perspective: payload.perspective,
+        delta: fallbackReply,
+        done: true,
+      })
+      return { ok: true, reply: fallbackReply }
+    }
+
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 30_000)
+      let fullReply = ''
+      for await (const chunk of c.model.discuss(payload, controller.signal)) {
+        fullReply += chunk
+        send(CH.send.discussionDelta, {
+          sessionId: payload.sessionId,
+          perspective: payload.perspective,
+          delta: chunk,
+          done: false,
+        })
+      }
+      clearTimeout(timer)
+      send(CH.send.discussionDelta, {
+        sessionId: payload.sessionId,
+        perspective: payload.perspective,
+        delta: '',
+        done: true,
+      })
+      return { ok: true, reply: fullReply }
+    } catch (err: any) {
+      return { ok: false, error: err.message || '讨论生成遇到问题' }
+    }
   })
 
   ipcMain.handle(CH.invoke.demoReset, () => {

@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
 import { capabilitiesFor } from '../shared/capabilities'
-import type { ForestApi, ReceiveChunk, ReflectionChunk } from '../shared/ipc'
+import type { DiscussionChunk, ForestApi, ReceiveChunk, ReflectionChunk } from '../shared/ipc'
 import type { Capabilities, RingDraft, RingRow } from '../shared/types'
 import { findResonantRing } from '../shared/resonance'
 
@@ -17,6 +17,7 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
 
   const receiveListeners: Array<(p: ReceiveChunk) => void> = []
   const reflectionListeners: Array<(p: ReflectionChunk) => void> = []
+  const discussionListeners: Array<(p: DiscussionChunk) => void> = []
   const rings: RingRow[] = opts.initialRings ? [...opts.initialRings] : []
 
 
@@ -85,8 +86,26 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
     saveReview: async () => ({ reviewId: 'rv1' }),
     clearAll: async () => ({ empty: true }),
     demoReset: async () => ({ empty: true }),
+    getModelConfig: async () => ({ baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', apiKey: 'test-key' }),
+    saveModelConfig: async () => ({ ok: true }),
+    testModelConfig: async () => ({ ok: true, latencyMs: 50, message: '测试成功' }),
+    discuss: async (p) => {
+      setTimeout(() => {
+        discussionListeners.forEach((cb) =>
+          cb({ sessionId: p.sessionId, perspective: p.perspective, delta: '这是苏格拉底反问回应', done: true }),
+        )
+      }, 10)
+      return { ok: true, reply: '这是苏格拉底反问回应' }
+    },
     onReceive: (cb) => { receiveListeners.push(cb); return () => {} },
     onReflection: (cb) => { reflectionListeners.push(cb); return () => {} },
+    onDiscussionDelta: (cb) => {
+      discussionListeners.push(cb)
+      return () => {
+        const i = discussionListeners.indexOf(cb)
+        if (i >= 0) discussionListeners.splice(i, 1)
+      }
+    },
     onVerdict: () => () => {},
     onState: () => () => {},
     onError: () => () => {},
@@ -432,6 +451,88 @@ describe('四幕界面逐幕走查', () => {
     expect(screen.getByText('微行动突破率')).toBeTruthy()
     expect(screen.getByText('100%')).toBeTruthy()
     expect(screen.getByText('跨领域认知分布')).toBeTruthy()
+  })
+
+  it('大模型与中转站设置窗口：配置预设切换、连通性测速与保存', async () => {
+    boot()
+
+    // 验证右上角全局模型设置入口
+    const settingsBtn = screen.getByLabelText('打开大模型设置')
+    expect(settingsBtn).toBeTruthy()
+    fireEvent.click(settingsBtn)
+
+    // 弹窗打开
+    await waitFor(() => expect(screen.getByText('⚙️ 大模型与中转站设置')).toBeTruthy())
+
+    // 切换厂商预设为硅基流动
+    const siliconPreset = screen.getByText('硅基流动')
+    fireEvent.click(siliconPreset)
+
+    // 验证输入框中填入的 SiliconFlow 端点
+    const baseUrlInput = screen.getByPlaceholderText(/例如 https:\/\/api.deepseek.com\/v1 或中转站地址/) as HTMLInputElement
+    expect(baseUrlInput.value).toBe('https://api.siliconflow.cn/v1')
+
+    // 点击测试连通性
+    const testBtn = screen.getByText('测试连通性')
+    fireEvent.click(testBtn)
+
+    // 验证测试结果展示
+    await waitFor(() => expect(screen.getByText(/测试成功/)).toBeTruthy())
+
+    // 点击保存并应用
+    const saveBtn = screen.getByText('保存并应用')
+    fireEvent.click(saveBtn)
+    await waitFor(() => expect(screen.getByText(/已保存并即时热更新/)).toBeTruthy())
+  })
+
+  it('在线苏格拉底多轮推敲讨论抽屉与防反刍收敛留年轮', async () => {
+    boot()
+
+    // 进入表达并走向思考分支
+    await expressAndSubmit('项目上线被延期了，大家可能会觉得我能力不行')
+    fireEvent.click(screen.getByText('陪我想一想'))
+    await waitFor(() => expect(screen.getByText('继续')).toBeTruthy())
+    fireEvent.click(screen.getByText('继续'))
+
+    // 验证三视角卡片加载完成且包含「深入推敲」入口
+    await waitFor(() => expect(screen.getByText('守护者')).toBeTruthy())
+    const discussButtons = screen.getAllByText('💬 深入推敲')
+    expect(discussButtons.length).toBeGreaterThan(0)
+
+    // 点击守护者视角的深入推敲，呼出 DiscussDrawer 抽屉
+    fireEvent.click(discussButtons[0])
+    await waitFor(() => expect(screen.getByText('守护者 · 深度推敲')).toBeTruthy())
+
+    // 抽屉内包含初始苏格拉底提问（背景卡片与抽屉内各出现一次）
+    expect(screen.getAllByText(/守护者反问：你最想守护的核心边界是什么？/).length).toBe(2)
+
+    // 发送一轮对话
+    const discussInput = screen.getByPlaceholderText('写下一句回应或困惑...')
+    fireEvent.change(discussInput, { target: { value: '我其实最担心的是影响团队进度' } })
+    fireEvent.click(screen.getByText('发送'))
+
+    // 验证回复流式到达
+    await waitFor(() => expect(screen.getByText(/这是苏格拉底反问回应/)).toBeTruthy())
+
+    // 连续进行多轮对话触发防反刍卡片
+    fireEvent.change(discussInput, { target: { value: '如果我今晚加班能不能补回来？' } })
+    fireEvent.click(screen.getByText('发送'))
+    await waitFor(() => expect(screen.getAllByText(/这是苏格拉底反问回应/).length).toBe(2))
+
+    fireEvent.change(discussInput, { target: { value: '我还是有点忐忑' } })
+    fireEvent.click(screen.getByText('发送'))
+    await waitFor(() => expect(screen.getAllByText(/这是苏格拉底反问回应/).length).toBe(3))
+
+    // 验证防反刍收敛卡片出现
+    await waitFor(() => expect(screen.getByText('推敲已触及深处：捕捉到了令你释怀的想法吗？')).toBeTruthy())
+
+    // 点击「以此顿悟留年轮」
+    fireEvent.click(screen.getByText('以此顿悟留年轮'))
+
+    // 抽屉关闭并直达年轮确认页面，预填该顿悟
+    await waitFor(() => expect(screen.getByText('留下一圈年轮')).toBeTruthy())
+    const noteInput = screen.getByLabelText('你自己的一句话') as HTMLInputElement
+    expect(noteInput.value).toContain('我还是有点忐忑')
   })
 })
 

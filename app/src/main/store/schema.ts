@@ -60,4 +60,10 @@ CREATE TABLE IF NOT EXISTS interaction_event (
   created_at           TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ie_name_idx ON interaction_event(event_name, created_at);
+
+CREATE TABLE IF NOT EXISTS app_config (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 `
+
