@@ -1,0 +1,12 @@
+appId: com.jieyou.forest
+productName: 解忧森林
+directories:
+  output: release
+files:
+  - out/**
+  - resources/**
+mac:
+  category: public.app-category.healthcare-fitness
+  target:
+    - dir
+  identity: null
