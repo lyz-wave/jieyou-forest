@@ -34,6 +34,14 @@
   --t-fast: 170ms;
   --t-base: 340ms;
   --t-slow: 620ms;
+
+  /* 昼夜切换的步调：与纸艺舞台的 --pf-nd / --pf-nd-ease 对齐
+     （那两个 token 定义在 paper/PaperForest.css 的 :root 上，
+     走 var() 取值，所以 prefers-reduced-motion 里改一处、这里跟着变）。
+     卡片、正文这些大面如果自己另走一套时长，切换时就会先于背景变色，
+     整屏看上去就是错开的。 */
+  --night-t: var(--pf-nd, 720ms);
+  --night-ease: var(--pf-nd-ease, cubic-bezier(0.33, 0, 0.18, 1));
 }
 
 * { box-sizing: border-box; }
@@ -142,10 +150,10 @@ html, body {
   pointer-events: auto;
 }
 
-h1 { font-size: 19px; font-weight: 600; margin: 0 0 4px; letter-spacing: 0.01em; }
+h1 { font-size: 19px; font-weight: 600; margin: 0 0 4px; letter-spacing: 0.01em; transition: color var(--night-t) var(--night-ease); }
 h2 { font-weight: 600; }
-.sub { color: var(--muted); font-size: 13px; margin: 0 0 26px; }
-.muted { color: var(--muted); font-size: 13px; }
+.sub { color: var(--muted); font-size: 13px; margin: 0 0 26px; transition: color var(--night-t) var(--night-ease); }
+.muted { color: var(--muted); font-size: 13px; transition: color var(--night-t) var(--night-ease); }
 
 /* 承接回应还没到时的呼吸占位。
    纯明暗起伏，无位移、无旋转、无百分比——它传达的是"正在形成"，不是"正在处理"。
@@ -212,7 +220,9 @@ h2 { font-weight: 600; }
     0 1px 3px rgba(58, 38, 18, 0.08),
     0 10px 24px -12px rgba(58, 38, 18, 0.22),
     0 28px 56px -28px rgba(39, 78, 82, 0.28);
-  transition: background var(--t-base) ease, color var(--t-base) ease, box-shadow var(--t-base) ease;
+  transition: background var(--night-t) var(--night-ease),
+              color var(--night-t) var(--night-ease),
+              box-shadow var(--night-t) var(--night-ease);
 }
 
 body.pf-night .card {
@@ -224,6 +234,9 @@ body.pf-night .card {
     0 16px 36px -12px rgba(2, 2, 16, 0.6);
 }
 
+/* 幕标题与说明文字不在 .card 里，原来只改了 .card 的前景色，
+   于是入夜后深色标题压在深色舞台上几乎读不出来。这里补齐。 */
+body.pf-night .scene h1 { color: #f1ecf8; }
 body.pf-night .sub,
 body.pf-night .muted {
   color: #b3aec8;
@@ -431,6 +444,7 @@ label.field { display: block; margin: 14px 0 5px; font-size: 13px; color: var(--
   inset: -18% -30% -10%;
   background: radial-gradient(50% 50% at 50% 55%, rgba(255, 252, 232, 0.5), transparent 70%);
   pointer-events: none;
+  transition: background var(--night-t) var(--night-ease);
 }
 body.pf-night .tree::before {
   background: radial-gradient(50% 50% at 50% 55%, rgba(130, 160, 255, 0.25), transparent 70%);
@@ -442,6 +456,7 @@ body.pf-night .tree::before {
   transform-origin: 50% 94%;
   animation: sway 9s ease-in-out infinite alternate;
   filter: drop-shadow(0 -1px 0 rgba(255, 250, 236, 0.5)) drop-shadow(0 6px 12px rgba(58, 38, 18, 0.22));
+  transition: filter var(--night-t) var(--night-ease);
 }
 body.pf-night .tree svg {
   filter: drop-shadow(0 -1px 0 rgba(176, 186, 255, 0.2)) drop-shadow(0 6px 12px rgba(6, 6, 32, 0.5));
@@ -855,6 +870,28 @@ body.pf-night .discuss-drawer-content input {
   border-color: rgba(60, 95, 75, 0.5) !important;
 }
 
+/* ---------- 昼夜切换：夜间态容器共用同一段过渡 ----------
+   下面这些盒子只在 body.pf-night 下换底色与描边，原来全是瞬变：
+   舞台已经慢慢入夜了，它们却「啪」地跳一下。统一到 --night-t 之后，
+   整屏（舞台 + 卡片 + 这些盒子）是同一个节拍。 */
+.paper-shredder-box,
+.paper-text,
+.paper-ball-svg,
+.calm-transition-banner,
+.storm-rustle-box,
+.wood-chipping-box,
+.untangle-game-box,
+.wooden-fish-box,
+.breathing-tree-box,
+.trunk-detail-card,
+.trunk-disc-svg {
+  transition: background-color var(--night-t) var(--night-ease),
+              border-color var(--night-t) var(--night-ease),
+              color var(--night-t) var(--night-ease),
+              box-shadow var(--night-t) var(--night-ease),
+              filter var(--night-t) var(--night-ease);
+}
+
 /* ---------- 减少动画 ---------- */
 
 
@@ -865,6 +902,54 @@ body.pf-night .discuss-drawer-content input {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+
+  /* 上面那条把过渡压成 0.001ms，对「昼夜换色」是错的：
+     整屏颜色在同一帧瞬变，本身就是一次闪，而产品约束要求无闪烁。
+     换色不是位移，保留一段短促线性的交叉淡入即可；
+     位移与缩放仍然全部关掉。
+     时长 token 由 PaperForest.css 在同一媒体查询下改写，这里不重复定义。 */
+  .card,
+  .banner,
+  h1,
+  .sub,
+  .muted,
+  .tree::before,
+  .tree svg,
+  .paper-shredder-box,
+  .paper-text,
+  .paper-ball-svg,
+  .calm-transition-banner,
+  .storm-rustle-box,
+  .wood-chipping-box,
+  .untangle-game-box,
+  .wooden-fish-box,
+  .breathing-tree-box,
+  .trunk-detail-card,
+  .trunk-disc-svg,
+  .pf-sky-night,
+  .pf-sky-grain,
+  .pf-pins,
+  .pf-grain,
+  .pf-vignette,
+  .pf-hang,
+  .pf-hang .pf-string,
+  .pf-tag,
+  .pf-tag-string,
+  .pf-tag-knot,
+  .pf-tag-hole,
+  .pf-kicker,
+  .pf-tag h1 em,
+  .pf-tag .pf-sub,
+  .pf-leaf path,
+  .pf-chip,
+  .pf-track,
+  .pf-knob,
+  .pf-knob svg,
+  .pf-stage .pf-layer path,
+  .pf-stage .pf-layer circle,
+  .pf-stage .pf-layer ellipse {
+    transition-duration: var(--pf-nd) !important;
   }
 
   /* 位移与缩放全部关掉；状态变化改为纯淡入淡出，仍然看得见 */

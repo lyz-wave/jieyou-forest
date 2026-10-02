@@ -32,8 +32,10 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
-  // 本地语音转写要录音。不放行媒体权限的话，getUserMedia 会直接 reject，
-  // 界面上只能看到一个笼统的失败，查不出是权限问题。
+  // 只放行麦克风（语音输入要用 getUserMedia），其余一律拒绝。
+  // 不放行的话 getUserMedia 会直接 reject，界面上只能看到一个笼统的失败。
+  // 系统层面还有一道：macOS 会按 Info.plist 里的 NSMicrophoneUsageDescription
+  // 弹窗询问，那条文案在 electron-builder.yml 的 mac.extendInfo 里。
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(permission === 'media')
   })

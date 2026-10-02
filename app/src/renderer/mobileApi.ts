@@ -2,7 +2,6 @@ import type {
   BannerResult,
   CognitiveAnalysis,
   ListModelsResult,
-  TranscribeResult,
   ConsentResult,
   CorrectResult,
   DeleteResult,
@@ -21,11 +20,14 @@ import type {
   SubmitInput,
   SubmitResult,
   TestModelResult,
+  TranscribeInput,
+  TranscribeResult,
   VerdictEvent,
 } from '../shared/ipc'
 import type { ReviewDraft, RingRow } from '../shared/types'
 import { capabilitiesFor } from '../shared/capabilities'
 import { findResonantRing } from '../shared/resonance'
+import { transcribeAudio } from '../shared/asr'
 import rules from '../shared/gate/rules.json'
 import { applyCorrection, evaluateGate, type GateResult, type RulesFile } from '../shared/gate/gate'
 import { createModelClient, listModels } from '../shared/model/client'
@@ -289,12 +291,6 @@ export function createMobileForestApi(): ForestApi {
       })
     },
 
-    async transcribe(): Promise<TranscribeResult> {
-      // 桌面端的语音输入走本机 whisper.cpp。移动端没有这个工具，
-      // 与其假装能用，不如说清楚——界面会据此回退到浏览器的识别服务。
-      return { ok: false, text: '', error: '这个平台没有本地语音转写。' }
-    },
-
     async getModelConfig(): Promise<ModelConfigDto> {
       return { ...modelConfig }
     },
@@ -338,6 +334,32 @@ export function createMobileForestApi(): ForestApi {
         return { ok: true, latencyMs, message: '连接成功，延迟 ' + latencyMs + 'ms' }
       } catch (err) {
         return { ok: false, latencyMs: Date.now() - start, error: (err as Error).message || '网络连接失败' }
+      }
+    },
+
+    // 移动端/浏览器形态没有主进程，直接在渲染层调同一个 shared/asr.ts。
+    async transcribe(p: TranscribeInput): Promise<TranscribeResult> {
+      if (!p?.audio || !p.audio.byteLength) {
+        return { ok: false, error: '没有录到声音' }
+      }
+      if (!modelConfig.apiKey?.trim()) {
+        return { ok: false, error: '还没有配置 API Key：语音识别要走你在「模型设置」里填写的端点' }
+      }
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 60_000)
+      try {
+        const text = await transcribeAudio({
+          audio: new Uint8Array(p.audio),
+          mimeType: p.mimeType,
+          config: { baseUrl: modelConfig.baseUrl, apiKey: modelConfig.apiKey, model: modelConfig.asrModel },
+          signal: controller.signal,
+        })
+        return { ok: true, text }
+      } catch (err: any) {
+        const msg = err?.name === 'AbortError' ? '识别超时（60 秒）' : err?.message || '语音识别失败'
+        return { ok: false, error: msg }
+      } finally {
+        clearTimeout(timer)
       }
     },
 

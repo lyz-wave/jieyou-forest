@@ -21,58 +21,102 @@ type SpeechRecognitionInstance = {
   onend: (() => void) | null
 }
 
-/** 单次录音的上限。再长下去转写会很慢，而且不像是一句话了。 */
+type Mode = 'idle' | 'asking' | 'recording' | 'transcribing'
+
+/** 单次录音上限。语音识别按秒计费，也没有理由让一次录音无限长。 */
 const MAX_RECORD_MS = 60_000
 
+/** 挑一个浏览器与识别服务都认的容器格式。Chromium 出 webm/opus，
+ *  Safari 与 WKWebView 只出 mp4。 */
+function pickRecorderMime(): string {
+  if (typeof MediaRecorder === 'undefined') return ''
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']
+  for (const mime of candidates) {
+    try {
+      if (MediaRecorder.isTypeSupported(mime)) return mime
+    } catch {}
+  }
+  return ''
+}
+
+function speechRecognitionCtor(): (new () => SpeechRecognitionInstance) | null {
+  const w = window as any
+  return w.SpeechRecognition || w.webkitSpeechRecognition || null
+}
+
+/**
+ * 语音输入按钮。
+ *
+ * 两条链路，按可用性降级：
+ *   1. window.forest.transcribe —— 录音后交主进程走用户配置的识别端点。
+ *      这是 Electron（macOS 桌面版）与移动端适配器都走的路。
+ *   2. Web Speech API —— 仅当宿主真的提供它时才用（Safari / 部分 Chromium）。
+ *      Electron 不带 Google 语音服务密钥，webkitSpeechRecognition 看着存在
+ *      但一调就报 network，所以只要有第 1 条就不碰它。
+ * 两条都没有时按钮置灰并说明原因，而不是假装能点。
+ */
 export default function VoiceInputButton({
   onTranscript,
   disabled = false,
   className = '',
   size = 'md',
-  title = '点击开始录音，再点一下结束并转写',
+  // 文案必须是实话：主链路（window.forest.transcribe）把录音发往用户自己配置的
+  // 识别端点；只有退回 Web Speech 时才会交给系统/浏览器的识别服务（通常联网）。
+  title = '语音输入（录音发往你自己配置的识别端点；退回系统识别时会联网）',
 }: VoiceInputButtonProps) {
-  const [isListening, setIsListening] = useState(false)
-  const [supported, setSupported] = useState(true)
+  const [mode, setMode] = useState<Mode>('idle')
   const [tip, setTip] = useState('')
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
+  const [hasEndpointAsr, setHasEndpointAsr] = useState(false)
+  const [hasWebSpeech, setHasWebSpeech] = useState(false)
+
   const recorderRef = useRef<MediaRecorder | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
-  const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  /**
-   * 桌面端与浏览器的语音走的是**两条完全不同的路**：
-   *
-   * · Electron：Web Speech API 永远不可用（它依赖 Chrome 内置的服务端识别引擎，
-   *   Electron 构建没有那个密钥，官方 issue electron#46143，开发模式与打包版都一样）。
-   *   所以走本机 whisper.cpp —— 顺带让"纯本地识别、不上传"这句话变成真的。
-   * · 浏览器/移动端：Web Speech 是能用的，就用它。
-   */
-  const isElectron = typeof navigator !== 'undefined' && /Electron/i.test(navigator.userAgent)
-
-  useEffect(() => {
-    const SpeechRec =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    // 桌面端不靠它，所以它有不算"支持"
-    if (!isElectron && !SpeechRec) setSupported(false)
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort()
-        } catch {}
-      }
-      if (autoStopRef.current) clearTimeout(autoStopRef.current)
-    }
-  }, [isElectron])
+  const autoStopRef = useRef<number | null>(null)
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
+  const tipTimerRef = useRef<number | null>(null)
 
   const flashTip = useCallback((text: string, ms = 4000) => {
     setTip(text)
-    setTimeout(() => setTip(''), ms)
+    if (tipTimerRef.current) window.clearTimeout(tipTimerRef.current)
+    tipTimerRef.current = window.setTimeout(() => setTip(''), ms)
   }, [])
 
-  // ---------- 桌面端：录音 → 本机 whisper.cpp ----------
+  useEffect(() => {
+    const canRecord =
+      typeof navigator !== 'undefined' &&
+      !!navigator.mediaDevices?.getUserMedia &&
+      typeof MediaRecorder !== 'undefined'
+    setHasEndpointAsr(Boolean(window.forest?.transcribe) && canRecord)
+    setHasWebSpeech(Boolean(speechRecognitionCtor()))
+  }, [])
+
+  const supported = hasEndpointAsr || hasWebSpeech
+
+  const releaseStream = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    streamRef.current = null
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (autoStopRef.current) window.clearTimeout(autoStopRef.current)
+      if (tipTimerRef.current) window.clearTimeout(tipTimerRef.current)
+      try {
+        recognitionRef.current?.abort()
+      } catch {}
+      try {
+        recorderRef.current?.stop()
+      } catch {}
+      releaseStream()
+    }
+  }, [releaseStream])
+
+  /* ---------- 链路 1：录音 + 端点转写 ---------- */
+
   const stopRecording = useCallback(() => {
     if (autoStopRef.current) {
-      clearTimeout(autoStopRef.current)
+      window.clearTimeout(autoStopRef.current)
       autoStopRef.current = null
     }
     try {
@@ -81,81 +125,103 @@ export default function VoiceInputButton({
   }, [])
 
   const startRecording = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-      flashTip('这个环境拿不到麦克风接口。')
-      return
-    }
+    setMode('asking')
     let stream: MediaStream
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    } catch {
-      flashTip('没有麦克风权限。到「系统设置 → 隐私与安全性 → 麦克风」里允许后重试。', 7000)
+    } catch (err: any) {
+      setMode('idle')
+      const name = err?.name || ''
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        flashTip('请在系统设置里允许解忧森林使用麦克风', 6000)
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        flashTip('没有找到可用的麦克风', 5000)
+      } else {
+        flashTip('麦克风打开失败：' + (err?.message || name || '未知原因'), 5000)
+      }
       return
     }
 
-    const rec = new MediaRecorder(stream)
+    streamRef.current = stream
     chunksRef.current = []
-    rec.ondataavailable = (e) => {
+    const mime = pickRecorderMime()
+    let recorder: MediaRecorder
+    try {
+      recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
+    } catch (err: any) {
+      releaseStream()
+      setMode('idle')
+      flashTip('这台设备不支持录音：' + (err?.message || 'MediaRecorder 不可用'), 5000)
+      return
+    }
+    recorderRef.current = recorder
+
+    recorder.ondataavailable = (e: BlobEvent) => {
       if (e.data && e.data.size > 0) chunksRef.current.push(e.data)
     }
-    rec.onstop = async () => {
-      stream.getTracks().forEach((t) => t.stop())
-      setIsListening(false)
-      const blob = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' })
+
+    recorder.onerror = () => {
+      releaseStream()
+      setMode('idle')
+      flashTip('录音中断了，再试一次', 4000)
+    }
+
+    recorder.onstop = async () => {
+      releaseStream()
+      const type = recorder.mimeType || mime || 'audio/webm'
+      const blob = new Blob(chunksRef.current, { type })
       chunksRef.current = []
       if (blob.size === 0) {
-        flashTip('没有录到声音。')
+        setMode('idle')
+        flashTip('没有录到声音，再试一次', 4000)
         return
       }
-      setTip('正在转写…')
+      setMode('transcribing')
       try {
-        const audio = await blob.arrayBuffer()
-        const r = await window.forest.transcribe({ audio, mimeType: blob.type })
-        if (r.ok) {
+        const bytes = new Uint8Array(await blob.arrayBuffer())
+        const res = await window.forest.transcribe({ audio: bytes, mimeType: type })
+        if (res.ok && res.text) {
+          onTranscript(res.text)
+          setMode('idle')
           setTip('')
-          onTranscript(r.text)
         } else {
-          flashTip(r.error || '转写失败。', 7000)
+          setMode('idle')
+          flashTip(res.error || '语音识别失败', 6000)
         }
-      } catch {
-        flashTip('转写时出错了。', 6000)
+      } catch (err: any) {
+        setMode('idle')
+        flashTip('语音识别失败：' + (err?.message || '未知原因'), 6000)
       }
     }
 
-    rec.start()
-    recorderRef.current = rec
-    setIsListening(true)
-    setTip('正在听…再点一下结束')
-    autoStopRef.current = setTimeout(stopRecording, MAX_RECORD_MS)
-  }, [flashTip, onTranscript, stopRecording])
+    recorder.start()
+    setMode('recording')
+    setTip('正在聆听中，说完了可再点一下停止...')
+    autoStopRef.current = window.setTimeout(() => {
+      flashTip('单次录音最多 60 秒，先按这里识别')
+      stopRecording()
+    }, MAX_RECORD_MS)
+  }, [flashTip, onTranscript, releaseStream, stopRecording])
 
-  // ---------- 浏览器/移动端：Web Speech ----------
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop()
-      } catch {}
-    }
-    setIsListening(false)
-  }, [])
+  /* ---------- 链路 2：Web Speech（宿主自带识别时才用） ---------- */
 
-  const startListening = useCallback(() => {
-    const SpeechRec =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRec) {
-      flashTip('当前运行环境不支持语音识别。')
+  const startWebSpeech = useCallback(() => {
+    const Ctor = speechRecognitionCtor()
+    if (!Ctor) {
+      flashTip('当前运行环境不支持语音识别（Electron 打包版通常不可用）')
       return
     }
     try {
-      const recognition: SpeechRecognitionInstance = new SpeechRec()
+      const recognition = new Ctor()
       recognition.continuous = true
       recognition.interimResults = true
       recognition.lang = 'zh-CN'
 
       recognition.onstart = () => {
-        setIsListening(true)
+        setMode('recording')
         setTip('正在聆听中，说完了可再点一下停止...')
       }
+
       recognition.onresult = (event: any) => {
         let finalChunk = ''
         for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -163,68 +229,100 @@ export default function VoiceInputButton({
         }
         if (finalChunk.trim()) onTranscript(finalChunk.trim())
       }
+
       recognition.onerror = (event: any) => {
-        if (event.error === 'not-allowed') flashTip('请允许麦克风权限以使用语音输入')
-        else if (event.error === 'no-speech') return
-        else flashTip('识别提示: ' + event.error)
-        setIsListening(false)
+        if (event.error === 'no-speech') return
+        if (event.error === 'not-allowed') flashTip('请允许麦克风权限以使用语音输入', 6000)
+        else flashTip('识别提示：' + event.error, 5000)
+        setMode('idle')
       }
-      recognition.onend = () => setIsListening(false)
+
+      recognition.onend = () => setMode('idle')
 
       recognitionRef.current = recognition
       recognition.start()
     } catch (err: any) {
-      flashTip(err?.message || '语音输入启动失败')
-      setIsListening(false)
+      setMode('idle')
+      flashTip(err?.message || '语音输入启动失败', 4000)
     }
   }, [flashTip, onTranscript])
+
+  /* ---------- 交互 ---------- */
 
   const toggle = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (isListening) {
-      if (isElectron) stopRecording()
-      else stopListening()
+    if (disabled || !supported) return
+
+    if (mode === 'recording') {
+      if (hasEndpointAsr) stopRecording()
+      else {
+        try {
+          recognitionRef.current?.stop()
+        } catch {}
+        setMode('idle')
+      }
       setTip('')
-    } else if (isElectron) {
-      void startRecording()
-    } else {
-      startListening()
+      return
     }
+    if (mode === 'asking' || mode === 'transcribing') return
+
+    if (hasEndpointAsr) void startRecording()
+    else startWebSpeech()
   }
 
+  const busy = mode === 'asking' || mode === 'recording' || mode === 'transcribing'
+  const active = mode === 'recording'
   const btnSize = size === 'sm' ? 32 : 38
   const iconSize = size === 'sm' ? 16 : 20
+
+  const disabledReason = !supported
+    ? '当前运行环境没有可用的语音识别通道'
+    : disabled
+      ? title
+      : ''
+
+  const stateLabel = mode === 'asking'
+    ? '正在请求麦克风权限'
+    : mode === 'recording'
+      ? '正在聆听中，点击停止'
+      : mode === 'transcribing'
+        ? '正在识别'
+        : title
 
   return (
     <div className={`voice-input-wrapper ${className}`} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
       <button
         type="button"
         onClick={toggle}
-        disabled={disabled}
-        aria-label={isListening ? '停止语音输入' : title}
-        title={!supported ? '当前平台不支持语音识别' : isListening ? '点击结束并转写' : title}
-        className={`voice-btn ${isListening ? 'listening' : ''}`}
+        disabled={disabled || !supported}
+        aria-label={active ? '停止语音输入' : title}
+        aria-busy={busy}
+        title={disabledReason || stateLabel}
+        className={`voice-btn ${active ? 'listening' : ''} ${busy ? 'busy' : ''}`}
         style={{
           width: btnSize,
           height: btnSize,
           borderRadius: '50%',
-          border: isListening ? '1.5px solid #4a8d5c' : '1px solid rgba(180, 160, 130, 0.35)',
-          background: isListening ? 'rgba(74, 141, 92, 0.18)' : 'rgba(255, 255, 255, 0.65)',
-          color: isListening ? '#2d6a3f' : 'var(--muted)',
+          border: active ? '1.5px solid #4a8d5c' : '1px solid rgba(180, 160, 130, 0.35)',
+          background: active
+            ? 'rgba(74, 141, 92, 0.18)'
+            : 'rgba(255, 255, 255, 0.65)',
+          color: active ? '#2d6a3f' : 'var(--muted)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          cursor: disabled ? 'not-allowed' : 'pointer',
+          cursor: disabled || !supported ? 'not-allowed' : 'pointer',
+          opacity: disabled || !supported ? 0.55 : 1,
           padding: 0,
           transition: 'all 0.2s cubic-bezier(0.2, 1, 0.3, 1)',
-          boxShadow: isListening
+          boxShadow: active
             ? '0 0 0 4px rgba(74, 141, 92, 0.25), 0 2px 8px rgba(40, 100, 60, 0.2)'
             : '0 1px 4px rgba(0,0,0,0.06)',
           backdropFilter: 'blur(8px)',
         }}
       >
-        {isListening ? (
+        {busy ? (
           <span className="voice-wave-anim" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <span className="wave-bar b1" />
             <span className="wave-bar b2" />

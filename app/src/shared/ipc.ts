@@ -111,8 +111,23 @@ export interface ModelConfigDto {
   apiKey?: string
   baseUrl: string
   model: string
+  /** 语音转文字的模型。留空则按 baseUrl 推断（shared/asr.ts: defaultAsrModel）。 */
+  asrModel?: string
   receiveTimeoutMs?: number
   reflectTimeoutMs?: number
+}
+
+export interface TranscribeInput {
+  /** 录音字节。走结构化克隆，不是 base64，避免大段字符串在 IPC 上翻倍。 */
+  audio: Uint8Array
+  /** 录音的 MIME 类型，决定文件名后缀 */
+  mimeType: string
+}
+
+export interface TranscribeResult {
+  ok: boolean
+  text?: string
+  error?: string
 }
 
 export interface TestModelResult {
@@ -126,13 +141,6 @@ export interface ListModelsResult {
   ok: boolean
   /** 服务端返回的可用模型 id 列表。失败时为空数组，原因在 error 里。 */
   models: string[]
-  error?: string
-}
-
-/** 本地语音转写的结果。走的是本机 whisper.cpp，音频不出这台电脑。 */
-export interface TranscribeResult {
-  ok: boolean
-  text: string
   error?: string
 }
 
@@ -206,7 +214,7 @@ export interface ForestApi {
   saveModelConfig(cfg: ModelConfigDto): Promise<{ ok: boolean }>
   testModelConfig(cfg: ModelConfigDto): Promise<TestModelResult>
   listModels(cfg: ModelConfigDto): Promise<ListModelsResult>
-  transcribe(p: { audio: ArrayBuffer; mimeType: string }): Promise<TranscribeResult>
+  transcribe(p: TranscribeInput): Promise<TranscribeResult>
   discuss(p: DiscussInput): Promise<DiscussResult>
 
   onReceive(cb: (p: ReceiveChunk) => void): () => void

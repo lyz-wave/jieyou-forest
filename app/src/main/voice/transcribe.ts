@@ -46,16 +46,20 @@ function explain(err: unknown): string {
   return tail ? '转写失败：' + tail : '转写失败。'
 }
 
-export async function transcribeLocal(audio: ArrayBuffer, _mimeType: string): Promise<TranscribeResult> {
+/** 本机是否具备本地转写的条件（有模型文件即可；工具缺失会在调用时报出来）。 */
+export function hasLocalWhisper(): boolean {
+  return findModel() !== undefined
+}
+
+export async function transcribeLocal(audio: Uint8Array, _mimeType: string): Promise<TranscribeResult> {
   const model = findModel()
   if (!model) {
     return {
       ok: false,
-      text: '',
       error: '没有找到本地语音模型。可运行：mkdir -p ~/.cache/whisper.cpp && curl -L -o ~/.cache/whisper.cpp/ggml-base.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin',
     }
   }
-  if (audio.byteLength === 0) return { ok: false, text: '', error: '没有录到声音。' }
+  if (audio.byteLength === 0) return { ok: false, error: '没有录到声音。' }
 
   const dir = await mkdtemp(join(tmpdir(), 'jieyou-voice-'))
   const raw = join(dir, 'in.webm')
@@ -73,10 +77,10 @@ export async function transcribeLocal(audio: ArrayBuffer, _mimeType: string): Pr
       { timeout: 120_000, maxBuffer: 8 * 1024 * 1024 },
     )
     const text = (await readFile(out + '.txt', 'utf8')).trim()
-    if (!text) return { ok: false, text: '', error: '没有听清，能再说一遍吗？' }
+    if (!text) return { ok: false, error: '没有听清，能再说一遍吗？' }
     return { ok: true, text }
   } catch (err) {
-    return { ok: false, text: '', error: explain(err) }
+    return { ok: false, error: explain(err) }
   } finally {
     // 录音是隐私数据，无论成败都从磁盘上抹掉
     await rm(dir, { recursive: true, force: true }).catch(() => {})

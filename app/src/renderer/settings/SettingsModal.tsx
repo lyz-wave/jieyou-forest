@@ -137,6 +137,9 @@ export default function SettingsModal({ isOpen, onClose, onRecut }: SettingsModa
         ...prev,
         baseUrl: preset.baseUrl,
         model: preset.model,
+        // 换端点时把识别模型清空，回到按端点自动推断，
+        // 免得留下上一个厂商的模型名导致 400。
+        asrModel: '',
       }))
     }
   }
@@ -458,6 +461,36 @@ export default function SettingsModal({ isOpen, onClose, onRecut }: SettingsModa
               </div>
             )}
           </div>
+
+          {/* 语音识别模型（可选） */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <label className="field" style={{ marginBottom: 4 }}>
+                语音识别模型（可选）
+              </label>
+              <span style={{ fontSize: 11, color: 'var(--muted)' }}>留空则按端点自动推断</span>
+            </div>
+            <input
+              type="text"
+              value={config.asrModel || ''}
+              placeholder="whisper-1"
+              onChange={(e) => setConfig({ ...config, asrModel: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 10,
+                border: '1px solid rgba(180, 160, 130, 0.45)',
+                background: 'rgba(255, 255, 255, 0.85)',
+                fontSize: 13,
+                fontFamily: 'monospace',
+              }}
+            />
+            <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+              语音输入会调用 <code>{'{baseUrl}'}/audio/transcriptions</code>。OpenAI 用 <code>whisper-1</code>；
+              硅基流动用 <code>FunAudioLLM/SenseVoiceSmall</code>。DeepSeek 官方端点没有这条路，
+              要单独配一个支持转写的地址。
+            </p>
+          </div>
         </div>
 
         {/* 测试连通性结果反馈 */}
@@ -499,6 +532,8 @@ export default function SettingsModal({ isOpen, onClose, onRecut }: SettingsModa
           密钥与请求地址仅保存在本机（SQLite / localStorage），且<strong>明文、不加密</strong>——
           能访问这台电脑文件系统的人就能读到。请不要在这台机器上使用你不放心外泄的密钥。
           应用直接通过本地网络与你的目标端点发起通信，零中转、零云端留存。即便完全不配置 API，也能离线完整使用所有舒缓与年轮功能。
+          <strong>只有语音输入例外</strong>——按麦克风录下的音频会发往上面填写的端点做转写，
+          除此之外不会上传任何内容。
         </div>
 
         {/* 纸艺舞台。重剪留在这里，昼夜开关在右下角——

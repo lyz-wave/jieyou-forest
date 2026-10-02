@@ -469,9 +469,11 @@ export default function PaperForest({
       <path class="c-foxd" d="M46.5 -58.2C48.6 -60.4 51.6 -60.4 53.2 -58.4C51 -57.2 48.8 -57.2 46.5 -58.2Z"><animateTransform attributeName="transform" type="scale" values="1 1;1 1;1 .1;1 1" keyTimes="0;.9;.95;1" dur="4.6s" repeatCount="indefinite" additive="sum"/></path>
       <circle class="c-foxd" cx="66.6" cy="-48.6" r="2.4"/>`
 
-    // 适配各图层尺寸
+    // 适配各图层尺寸。
+    // 这里不再按层写入 --d 延迟：九层错开换色叠在一起就是一层一层地闪，
+    // 现在全场景共用 PaperForest.css 里的 --pf-nd 一个节拍。
     const layerEls = Array.from(stage.querySelectorAll<HTMLElement>('.pf-layer'))
-    layerEls.forEach((el, i) => {
+    layerEls.forEach((el) => {
       el.style.left = -M + 'px'
       el.style.top = -M + 'px'
       el.style.width = lw + 'px'
@@ -482,7 +484,6 @@ export default function PaperForest({
         sEl.setAttribute('width', String(lw))
         sEl.setAttribute('height', String(lh))
       }
-      el.style.setProperty('--d', (i * 0.025).toFixed(3) + 's')
     })
 
     const svgOf = (id: string) => stage.querySelector<SVGElement>(`#${id}>svg`)
@@ -904,7 +905,11 @@ export default function PaperForest({
       const sunD = clamp(mSize * 0.16, 78, 168)
       const sunX = W * (portrait ? 0.74 : 0.7)
       const sunY = H * (portrait ? 0.33 : 0.2)
-      const items: Array<{ cls: string; x: number; y: number; h: number; html: string; delay: number }> = []
+      // 吊杆上的物件：白昼件（太阳、云）与静夜件（月亮、星芒）各一组，
+      // 靠 .pf-night 把两组在上下两个位置之间对调。
+      // 这里不再给每件排延迟（原来 --hd 让它们错开起落，十一个吊件
+      // 各走各的，切换时整片天空都在动，看起来就是闪）。
+      const items: Array<{ cls: string; x: number; y: number; h: number; html: string }> = []
 
       // 太阳
       const rays: number[][] = []
@@ -914,12 +919,12 @@ export default function PaperForest({
         rays.push([Math.cos(a) * r, Math.sin(a) * r])
       }
       const sunSvg = `<svg viewBox="-62 -62 124 124" width="${q(sunD)}" height="${q(sunD)}"><path fill="#c8642d" d="${cut(rays, 0.5, 5)}"/><path fill="#d9a45b" d="${cut(circ(0, 0, 42, 40), 0.5, 5)}"/><path fill="#e6b772" d="${cut(circ(-4, -5, 29, 30), 0.4, 5)}"/></svg>`
-      items.push({ cls: 'day', x: sunX, y: sunY, h: sunD, html: sunSvg, delay: 0.1 })
+      items.push({ cls: 'day', x: sunX, y: sunY, h: sunD, html: sunSvg })
 
       // 月亮
       const moonD = sunD * 0.86
       const moonSvg = `<span class="pf-halo"></span><svg viewBox="-50 -50 100 100" width="${q(moonD)}" height="${q(moonD)}" style="position:relative"><path fill="#f5ecd6" d="${cut(circ(0, 0, 44, 44), 0.5, 5)}"/><path fill="#e3d4b3" d="${cut(circ(-14, -10, 9, 14), 0.4, 3)}${cut(circ(12, 8, 6, 10), 0.3, 3)}${cut(circ(-6, 18, 5, 9), 0.3, 3)}${cut(circ(18, -16, 4, 8), 0.3, 3)}"/></svg>`
-      items.push({ cls: 'nite', x: sunX - mSize * 0.02, y: sunY - mSize * 0.02, h: moonD, html: moonSvg, delay: 0.55 })
+      items.push({ cls: 'nite', x: sunX - mSize * 0.02, y: sunY - mSize * 0.02, h: moonD, html: moonSvg })
 
       // 云朵
       const cloudShape = (sc: number) => {
@@ -953,7 +958,7 @@ export default function PaperForest({
             [0.44, 0.12, 1],
             [0.575, 0.305, 0.62],
           ]
-      clouds.forEach(([cx, cy, sc], i) => {
+      clouds.forEach(([cx, cy, sc]) => {
         const cw = mSize * 0.19 * sc
         items.push({
           cls: 'day',
@@ -961,7 +966,6 @@ export default function PaperForest({
           y: H * cy,
           h: cw * 0.5,
           html: `<svg viewBox="-52 -36 104 60" width="${q(cw)}" height="${q(cw * 0.58)}"><path fill="#fbf6ea" d="${cloudShape(1)}"/><path fill="rgba(217,164,91,.16)" d="${cut([[-46, 20], [-46, 13], [48, 13], [48, 20]], 0.4, 6)}"/></svg>`,
-          delay: 0.2 + i * 0.12,
         })
       })
 
@@ -992,7 +996,7 @@ export default function PaperForest({
             [0.3, 0.3],
             [0.76, 0.06],
           ]
-      stars.forEach(([sx, sy], i) => {
+      stars.forEach(([sx, sy]) => {
         const ss = mSize * rr(0.024, 0.036)
         items.push({
           cls: 'nite',
@@ -1000,7 +1004,6 @@ export default function PaperForest({
           y: H * sy,
           h: ss,
           html: `<svg viewBox="-12 -12 24 24" width="${q(ss)}" height="${q(ss)}"><path fill="#e8b865" d="${cut(starPts(11, 4.6), 0.2, 3)}"/></svg>`,
-          delay: 0.7 + i * 0.08,
         })
       })
 
@@ -1008,7 +1011,7 @@ export default function PaperForest({
         .map((it) => {
           const len = it.y + M
           const up = len + it.h * 1.6 + 40
-          return `<div class="pf-hang ${it.cls}" style="left:${q(it.x + M)}px;--len:${q(len)}px;--up:${q(up)};--hd:${it.delay}s"><div class="pf-swing" style="--sd:${(4 + R() * 3).toFixed(2)}s;--sdl:-${(R() * 4).toFixed(2)}s"><span class="pf-string"></span><div class="pf-obj">${it.html}</div></div></div>`
+          return `<div class="pf-hang ${it.cls}" style="left:${q(it.x + M)}px;--len:${q(len)}px;--up:${q(up)}"><div class="pf-swing" style="--sd:${(4 + R() * 3).toFixed(2)}s;--sdl:-${(R() * 4).toFixed(2)}s"><span class="pf-string"></span><div class="pf-obj">${it.html}</div></div></div>`
         })
         .join('')
     }
@@ -1227,7 +1230,9 @@ export default function PaperForest({
     }
   }, [])
 
-  // 昼夜切换处理
+  // 昼夜切换处理。
+  // 注意不要在 setIsNight 的 updater 里做副作用：React 在 StrictMode 下会
+  // 重复调用 updater 来检查纯函数，onToggleNight 会被通知两次、tagV 也会加两次。
   const toggleNight = useCallback(() => {
     // state updater 必须是纯函数。原来把 onToggleNight 塞在里面，
     // React 重复调用 updater 时（StrictMode、并发渲染）会向父组件触发两次。
@@ -1506,8 +1511,15 @@ export default function PaperForest({
       s.tagV += (Math.random() - 0.5) * 30
     }
 
+    // 拖拽窗口时 resize 每秒会来几十次，每次都重建整片森林既掉帧又闪。
+    // 用 rAF 合并：一帧内最多重建一次，且只认最后一次的尺寸。
+    let resizeRaf = 0
     const onResize = () => {
-      build()
+      if (resizeRaf) return
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = 0
+        build()
+      })
     }
 
     window.addEventListener('pointermove', onPointerMove)
@@ -1520,6 +1532,7 @@ export default function PaperForest({
     return () => {
       running = false
       cancelAnimationFrame(s.rafId)
+      if (resizeRaf) cancelAnimationFrame(resizeRaf)
       window.removeEventListener('pointermove', onPointerMove)
       window.removeEventListener('pointerdown', onPointerDown)
       window.removeEventListener('pointerup', onPointerUp)

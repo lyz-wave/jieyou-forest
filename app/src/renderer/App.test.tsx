@@ -100,7 +100,6 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
     demoReset: async () => ({ empty: true }),
     getModelConfig: async () => ({ baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', apiKey: 'test-key' }),
     listModels: async () => ({ ok: true, models: ['deepseek-chat', 'deepseek-reasoner'] }),
-    transcribe: async () => ({ ok: true, text: '今天开会被打断了三次' }),
     saveModelConfig: async () => ({ ok: true }),
     testModelConfig: async () => ({ ok: true, latencyMs: 50, message: '测试成功' }),
     discuss: async (p) => {
@@ -111,6 +110,7 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
       }, 10)
       return { ok: true, reply: '这是苏格拉底反问回应' }
     },
+    transcribe: async () => ({ ok: true, text: '' }),
     onReceive: (cb) => { receiveListeners.push(cb); return () => {} },
     onReflection: (cb) => { reflectionListeners.push(cb); return () => {} },
     onDiscussionDelta: (cb) => {

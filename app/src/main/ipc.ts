@@ -8,11 +8,14 @@ import {
   type SaveRingInput,
   type SendChannel,
   type SubmitInput,
+  type TranscribeInput,
+  TranscribeResult,
 } from '../shared/ipc'
+import { transcribeAudio } from '../shared/asr'
 import rules from '../shared/gate/rules.json'
 import { applyCorrection, capabilitiesFor, evaluateGate, type RulesFile } from '../shared/gate/gate'
 import { createModelClient, listModels, loadConfig, testConnection, type ModelClient } from '../shared/model/client'
-import { transcribeLocal } from './voice/transcribe'
+import { hasLocalWhisper, transcribeLocal } from './voice/transcribe'
 import { runReceive } from '../shared/orchestrate/receive'
 import { runReflection, type ThreeViews } from '../shared/orchestrate/reflection'
 import { canEnterReflection, SessionMemory } from './orchestrate/session'
@@ -206,6 +209,68 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return { empty: repo.isDatabaseEmpty(c.db) }
   })
 
+  // 语音转文字。渲染层只负责录音，网络请求放在主进程：
+  // 密钥不出主进程、也不受渲染层 CSP 影响。
+  const readModelConfig = (): ModelConfigDto => {
+    const raw = repo.getConfig(db, 'model_config')
+    if (raw) {
+      try {
+        return JSON.parse(raw) as ModelConfigDto
+      } catch {}
+    }
+    return loadConfig()
+  }
+
+  // 语音转写：**本地优先，云端兜底**。
+  //
+  // 1) 本机 whisper.cpp —— 不需要任何服务商支持，音频不出这台电脑。
+  //    在默认配置下这是唯一能跑通的路：实测 Command Code 与 OpenCode Zen 的
+  //    /audio/transcriptions 都是 404，模型列表里也没有音频模型。
+  // 2) 退回用户配置的端点（需要服务商支持 /audio/transcriptions）。
+  //
+  // 两条都失败时把两边的原因都报出来，而不是只留后一个——
+  // 只说"云端 404"会让人以为配错了，其实是本机也没装 whisper。
+  ipcMain.handle(CH.invoke.transcribe, async (_e, payload: TranscribeInput) => {
+    if (!payload?.audio || !payload.audio.byteLength) {
+      return { ok: false, error: '没有录到声音' }
+    }
+
+    const viaEndpoint = async (): Promise<TranscribeResult> => {
+      const cfg = readModelConfig()
+      if (!cfg.apiKey?.trim()) {
+        return { ok: false, error: '还没有配置 API Key：云端识别要用你在「模型设置」里填写的端点' }
+      }
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 60_000)
+      try {
+        const text = await transcribeAudio({
+          audio: new Uint8Array(payload.audio),
+          mimeType: payload.mimeType,
+          config: { baseUrl: cfg.baseUrl, apiKey: cfg.apiKey, model: cfg.asrModel },
+          signal: controller.signal,
+        })
+        return { ok: true, text }
+      } catch (err: any) {
+        const msg = err?.name === 'AbortError' ? '识别超时（60 秒）' : err?.message || '语音识别失败'
+        return { ok: false, error: msg }
+      } finally {
+        clearTimeout(timer)
+      }
+    }
+
+    if (hasLocalWhisper()) {
+      const local = await transcribeLocal(payload.audio, payload.mimeType)
+      if (local.ok) return local
+      const cloud = await viaEndpoint()
+      return cloud.ok ? cloud : { ok: false, error: local.error + '；改用云端端点也没成功：' + cloud.error }
+    }
+
+    const cloud = await viaEndpoint()
+    return cloud.ok
+      ? cloud
+      : { ok: false, error: cloud.error + '。本机也没有可用的 whisper.cpp，语音输入需要其中之一。' }
+  })
+
   ipcMain.handle(CH.invoke.getModelConfig, () => {
     const c = must()
     const raw = repo.getConfig(c.db, 'model_config')
@@ -238,10 +303,6 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       receiveTimeoutMs: cfg.receiveTimeoutMs ?? 45_000,
       reflectTimeoutMs: cfg.reflectTimeoutMs ?? 30_000,
     })
-  })
-
-  ipcMain.handle(CH.invoke.transcribe, async (_e, p: { audio: ArrayBuffer; mimeType: string }) => {
-    return await transcribeLocal(p.audio, p.mimeType)
   })
 
   ipcMain.handle(CH.invoke.listModels, async (_e, cfg: ModelConfigDto) => {
