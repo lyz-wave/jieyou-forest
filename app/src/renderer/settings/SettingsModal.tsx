@@ -66,6 +66,20 @@ const PRESETS: ProviderPreset[] = [
     hint: 'SiliconFlow 聚合推理平台，性价比优选',
   },
   {
+    id: 'commandcode',
+    name: 'Command Code',
+    baseUrl: 'https://api.commandcode.ai/provider/v1',
+    model: 'deepseek/deepseek-v4-flash',
+    hint: 'OpenAI 兼容端点；同一个密钥也能给他们的 CLI 用',
+  },
+  {
+    id: 'opencode',
+    name: 'OpenCode Zen',
+    baseUrl: 'https://opencode.ai/zen/v1',
+    model: 'deepseek-v4-flash',
+    hint: 'OpenCode 官方精选模型网关，兼容 Chat Completions',
+  },
+  {
     id: 'custom',
     name: '自定义中转站 / OneAPI',
     baseUrl: '',

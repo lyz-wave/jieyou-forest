@@ -93,6 +93,17 @@ describe('大模型客户端与中转站配置适配', () => {
     )
     // 本地 Ollama：没有 /v1 也要能落到兼容端点上
     expect(normalizeModelsUrl('http://localhost:11434')).toBe('http://localhost:11434/v1/models')
+    // 实测可用的两家厂商（/models 均返回 200）：
+    // Command Code 的路径里有一段 /provider，仍然靠"以 /vN 结尾"命中
+    expect(normalizeModelsUrl('https://api.commandcode.ai/provider/v1')).toBe(
+      'https://api.commandcode.ai/provider/v1/models',
+    )
+    expect(normalizeChatUrl('https://api.commandcode.ai/provider/v1')).toBe(
+      'https://api.commandcode.ai/provider/v1/chat/completions',
+    )
+    // OpenCode Zen 是多段路径 + /v1 结尾
+    expect(normalizeModelsUrl('https://opencode.ai/zen/v1')).toBe('https://opencode.ai/zen/v1/models')
+    expect(normalizeChatUrl('https://opencode.ai/zen/v1')).toBe('https://opencode.ai/zen/v1/chat/completions')
   })
 
   it('OpenAI 风格的 { data: [{ id }] } 能解析出来', async () => {
