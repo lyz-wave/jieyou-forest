@@ -38,6 +38,9 @@ export const CH = {
 export type InvokeChannel = (typeof CH.invoke)[keyof typeof CH.invoke]
 export type SendChannel = (typeof CH.send)[keyof typeof CH.send]
 
+import type { RingResonance } from './resonance'
+export type { RingResonance } from './resonance'
+
 export interface SubmitInput {
   input: string
   emotion?: string
@@ -47,7 +50,9 @@ export interface SubmitResult {
   sessionId: string
   capabilities: Capabilities
   banner: string | null
+  resonance?: RingResonance | null
 }
+
 export interface CorrectResult {
   level: SafetyLevel
   capabilities: Capabilities

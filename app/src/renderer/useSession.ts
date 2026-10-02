@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Capabilities, ReflectionCardId, RingDraft, RingRow } from '../shared/types'
-import type { CognitiveAnalysis, MicroExperiment } from '../shared/ipc'
+import type { CognitiveAnalysis, MicroExperiment, RingResonance } from '../shared/ipc'
 
 export type Scene =
   | 'express' | 'crisis' | 'space' | 'rest' | 'consent' | 'reflect' | 'unfinished' | 'save' | 'tree'
@@ -17,9 +17,11 @@ export interface SessionController {
   cards: Partial<Record<ReflectionCardId, string>>
   analysis?: CognitiveAnalysis
   adoptedExperiment?: MicroExperiment
+  resonance?: RingResonance
   reason: string
   notice: string
   rings: RingRow[]
+
 
   setInput: (v: string) => void
   setEmotion: (v?: string) => void
@@ -48,6 +50,7 @@ export function useSession(): SessionController {
   const [cards, setCards] = useState<Partial<Record<ReflectionCardId, string>>>({})
   const [analysis, setAnalysis] = useState<CognitiveAnalysis>()
   const [adoptedExperiment, setAdoptedExperiment] = useState<MicroExperiment>()
+  const [resonance, setResonance] = useState<RingResonance>()
   const [reason, setReason] = useState('')
   const [notice, setNotice] = useState('')
   const [rings, setRings] = useState<RingRow[]>([])
@@ -71,8 +74,10 @@ export function useSession(): SessionController {
     setSessionId(r.sessionId)
     setCaps(r.capabilities)
     setBanner(r.banner)
+    setResonance(r.resonance ?? undefined)
     setScene(r.capabilities.canShowCrisis ? 'crisis' : 'space')
   }, [input, emotion])
+
 
   const choose = useCallback(
     async (path: 'rest' | 'reflect') => {
@@ -143,13 +148,15 @@ export function useSession(): SessionController {
     setCards({})
     setAnalysis(undefined)
     setAdoptedExperiment(undefined)
+    setResonance(undefined)
     setNotice('')
     setScene('express')
   }, [])
 
   return {
-    scene, input, emotion, sessionId, caps, banner, receive, cards, analysis, adoptedExperiment, reason, notice, rings,
+    scene, input, emotion, sessionId, caps, banner, receive, cards, analysis, adoptedExperiment, resonance, reason, notice, rings,
     setInput, setEmotion, go: setScene, submit, choose, consent, adoptExperiment, cancelReflect, correct,
     retryReceive, saveRing, openTree, removeRing, startOver,
   }
 }
+

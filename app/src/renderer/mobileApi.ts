@@ -17,6 +17,8 @@ import type {
 } from '../shared/ipc'
 import type { ReviewDraft, RingRow } from '../shared/types'
 import { capabilitiesFor } from '../shared/capabilities'
+import { findResonantRing } from '../shared/resonance'
+
 
 const STORAGE_KEY = 'jieyou_rings_v1'
 
@@ -68,8 +70,10 @@ export function createMobileForestApi(): ForestApi {
         stateListeners.forEach((cb) => cb({ sessionId, status: 'choosing' }))
       }, 350)
 
-      return { sessionId, capabilities: caps, banner: null }
+      const resonance = findResonantRing(p.input, rings)
+      return { sessionId, capabilities: caps, banner: null, resonance }
     },
+
 
     async retryReceive(): Promise<BannerResult> {
       return { banner: '这是内置的轻柔陪伴提示，山林一直在倾听你的心声。' }

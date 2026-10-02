@@ -5,6 +5,7 @@ import App from './App'
 import { capabilitiesFor } from '../shared/capabilities'
 import type { ForestApi, ReceiveChunk, ReflectionChunk } from '../shared/ipc'
 import type { Capabilities, RingDraft, RingRow } from '../shared/types'
+import { findResonantRing } from '../shared/resonance'
 
 // 逐幕走一遍的验收测试：拆分渲染层不应该改变任何一步的界面行为。
 // 假 API 只实现契约，不碰 Electron，所以它能跑在普通 Node 里。
@@ -20,12 +21,14 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
 
 
   const api: ForestApi = {
-    submit: async () => {
+    submit: async (p) => {
       receiveListeners.forEach((cb) =>
         cb({ sessionId: 's1', delta: '被这样对待，确实可能让人难受。', done: true }),
       )
-      return { sessionId: 's1', capabilities: capsFor(), banner: null }
+      const resonance = p?.input ? findResonantRing(p.input, rings) : null
+      return { sessionId: 's1', capabilities: capsFor(), banner: null, resonance }
     },
+
     retryReceive: async () => ({ banner: '这是内置的通用提示，不是针对你刚写的内容生成的' }),
     correct: async () => ({
       level: 'L2',
@@ -387,8 +390,50 @@ describe('四幕界面逐幕走查', () => {
     fireEvent.click(within(drawer).getByText('删除这圈年轮'))
     await waitFor(() => expect(screen.queryByTestId('ring-path-ring-work-1')).toBeNull())
     expect(screen.getByText('1 圈')).toBeTruthy()
+  })
 
+  it('跨时空年轮共鸣智能反哺与个人认知韧性图谱', async () => {
+    const initialRings: RingRow[] = [
+      {
+        id: 'ring-historic-1',
+        session_id: 's0',
+        type: 'action',
+        user_note: '方案被拒不等于全盘否定，明天只核实第一条建议',
+        save_original: 1,
+        original_text: '方案被导师推翻了，我很绝望',
+        user_decision: '焦虑',
+        action: '找导师梳理建议',
+        criterion: '得到边界反馈',
+        review_due: '2026-09-01',
+        created_at: '2026-08-20',
+        is_demo: 0,
+        idempotency_key: 'ring-historic-1',
+      },
+    ]
+
+    boot({ initialRings })
+
+    // 用户提交带有语义/关键词重叠的新困扰
+    await expressAndSubmit('今天我的新方案又被导师否定了，心里很慌很受打击')
+
+    // 验证承接空间中触发并展示「跨时空年轮共鸣」卡片
+    await waitFor(() => expect(screen.getByTestId('resonance-card')).toBeTruthy())
+    expect(screen.getByText('跨时空年轮共鸣')).toBeTruthy()
+    expect(screen.getByText(/方案被拒不等于全盘否定，明天只核实第一条建议/)).toBeTruthy()
+
+    // 点击共鸣卡片的「查看那圈年轮」直达我的树
+    fireEvent.click(screen.getByText('查看那圈年轮'))
+    await waitFor(() => expect(screen.getByText('我的树')).toBeTruthy())
+
+    // 验证个人认知韧性图谱
+    await waitFor(() => expect(screen.getByTestId('resilience-profile')).toBeTruthy())
+    expect(screen.getByText('个人认知韧性图谱')).toBeTruthy()
+    expect(screen.getByText('总年轮数')).toBeTruthy()
+    expect(screen.getByText('微行动突破率')).toBeTruthy()
+    expect(screen.getByText('100%')).toBeTruthy()
+    expect(screen.getByText('跨领域认知分布')).toBeTruthy()
   })
 })
+
 
 

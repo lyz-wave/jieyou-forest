@@ -7,6 +7,8 @@ import TrunkRingsDisc, {
   inferRingEmotion,
   EMOTION_THEMES,
 } from '../tree/TrunkRingsDisc'
+import ResilienceProfile from '../tree/ResilienceProfile'
+
 
 export default function MyTree({ s }: { s: SessionController }) {
   const [selectedRingId, setSelectedRingId] = useState<string | null>(null)
@@ -70,6 +72,10 @@ export default function MyTree({ s }: { s: SessionController }) {
             activeCategory={activeCategory}
             onSelectRing={handleSelectRing}
           />
+
+          {/* 个人认知韧性图谱 */}
+          <ResilienceProfile rings={s.rings} />
+
 
           {/* 年轮详情展开卡片 */}
           {selectedRing && (

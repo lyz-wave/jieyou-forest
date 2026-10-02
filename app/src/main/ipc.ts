@@ -9,7 +9,9 @@ import { runReflection, type ThreeViews } from './orchestrate/reflection'
 import { canEnterReflection, SessionMemory } from './orchestrate/session'
 import { openDatabase } from './store/db'
 import * as repo from './store/repo'
+import { findResonantRing } from '../shared/resonance'
 import type { ReviewDraft, SessionPath } from '../shared/types'
+
 
 const RULES = rules as RulesFile
 
@@ -64,8 +66,16 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       repo.recordEvent(c.db, { anonymousSessionId: s.id, eventName: 'generation_failed', resultCode: outcome.errorCode })
     }
     send(CH.send.state, { sessionId: s.id, status: s.status })
-    return { sessionId: s.id, capabilities: capabilitiesFor(gate.level), banner: outcome.banner ?? null }
+    const localRings = repo.listRings(c.db)
+    const resonance = findResonantRing(payload.input, localRings)
+    return {
+      sessionId: s.id,
+      capabilities: capabilitiesFor(gate.level),
+      banner: outcome.banner ?? null,
+      resonance,
+    }
   })
+
 
   ipcMain.handle(CH.invoke.retryReceive, async (_e, { sessionId }: { sessionId: string }) => {
     const c = must()
