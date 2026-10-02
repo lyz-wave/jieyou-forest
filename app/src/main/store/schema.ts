@@ -6,8 +6,6 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS session (
   id                    TEXT PRIMARY KEY,
   input                 TEXT NOT NULL,
-  selected_emotion      TEXT,
-  selected_intensity    TEXT,
   mode                  TEXT NOT NULL CHECK (mode IN ('rest','reflect')),
   reflection_consent_at TEXT,
   status                TEXT NOT NULL,

@@ -9,7 +9,6 @@ export type Scene =
 export interface SessionController {
   scene: Scene
   input: string
-  emotion?: string
   sessionId: string
   caps: Capabilities
   banner: string | null
@@ -24,7 +23,6 @@ export interface SessionController {
 
 
   setInput: (v: string) => void
-  setEmotion: (v?: string) => void
   go: (scene: Scene) => void
   submit: () => Promise<void>
   choose: (path: 'rest' | 'reflect') => Promise<void>
@@ -42,7 +40,6 @@ export interface SessionController {
 export function useSession(): SessionController {
   const [scene, setScene] = useState<Scene>('express')
   const [input, setInput] = useState('')
-  const [emotion, setEmotion] = useState<string>()
   const [sessionId, setSessionId] = useState('')
   const [caps, setCaps] = useState<Capabilities>({ canRest: true, canReflect: true, canShowCrisis: false })
   const [banner, setBanner] = useState<string | null>(null)
@@ -70,13 +67,13 @@ export function useSession(): SessionController {
       return
     }
     setNotice('')
-    const r = await window.forest.submit({ input, emotion })
+    const r = await window.forest.submit({ input })
     setSessionId(r.sessionId)
     setCaps(r.capabilities)
     setBanner(r.banner)
     setResonance(r.resonance ?? undefined)
     setScene(r.capabilities.canShowCrisis ? 'crisis' : 'space')
-  }, [input, emotion])
+  }, [input])
 
 
   const choose = useCallback(
@@ -154,8 +151,8 @@ export function useSession(): SessionController {
   }, [])
 
   return {
-    scene, input, emotion, sessionId, caps, banner, receive, cards, analysis, adoptedExperiment, resonance, reason, notice, rings,
-    setInput, setEmotion, go: setScene, submit, choose, consent, adoptExperiment, cancelReflect, correct,
+    scene, input, sessionId, caps, banner, receive, cards, analysis, adoptedExperiment, resonance, reason, notice, rings,
+    setInput, go: setScene, submit, choose, consent, adoptExperiment, cancelReflect, correct,
     retryReceive, saveRing, openTree, removeRing, startOver,
   }
 }

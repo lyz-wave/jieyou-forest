@@ -1,17 +1,47 @@
+import { useEffect, useState } from 'react'
 import type { SessionController } from '../useSession'
 import VoiceInputButton from '../voice/VoiceInputButton'
 
-const EMOTIONS = ['生气', '难过', '焦虑', '委屈', '疲惫', '平静', '说不清']
+const PRIVACY_SEEN_KEY = 'jieyou_seen_privacy_notice'
 
+/**
+ * 首页：一句话 + 一个输入框 + 一个按钮。
+ *
+ * 这里原本还有：副标题、一排七个情绪标签、一句"标签只是给你自己看的"、以及一个语音按钮。
+ * 全删了，理由各不相同：
+ *   · 情绪标签——用户点了之后对任何事都没有影响，界面上让人做一个不影响结果的选择，
+ *     比冗余更糟；而且系统不该对用户的感受下判断（见 PRD §16 第 5 条）。
+ *   · 副标题——和主标题在说同一件事，且是品牌口号语气。
+ *   · 那行说明——前半句在承认标签没用；后半句"默认不保存原文"是重要信息，
+ *     但该出现在用户真正要保存的那一刻，不是在门口念免责声明。
+ *   · 语音按钮——文案不实（Web Speech API 会把音频送到云端识别服务）、
+ *     Electron 打包版通常不可用、且 PRD 非目标明写不做语音采集。
+ */
 export default function Express({ s }: { s: SessionController }) {
+  // 隐私信息要在用户做决定的那一刻说，不是在门口念免责声明。
+  // 所以它只出现一次，之后由"保存年轮"那一步的字段清单接手。
+  const [showPrivacy, setShowPrivacy] = useState(false)
+  useEffect(() => {
+    try {
+      if (typeof localStorage !== 'undefined' && !localStorage.getItem(PRIVACY_SEEN_KEY)) {
+        setShowPrivacy(true)
+      }
+    } catch {}
+  }, [])
   const handleVoiceTranscript = (text: string) => {
     s.setInput(s.input ? s.input + ' ' + text : text)
+  }
+
+  const dismissPrivacy = () => {
+    try {
+      localStorage.setItem(PRIVACY_SEEN_KEY, '1')
+    } catch {}
+    setShowPrivacy(false)
   }
 
   return (
     <>
       <h1>今天想放下的，是心事，还是事情？</h1>
-      <p className="sub">先安放情绪，再看清问题。你可以只歇一会儿，不必每次都成长。</p>
       <div style={{ position: 'relative', width: '100%', marginBottom: 12 }}>
         <textarea
           value={s.input}
@@ -34,25 +64,28 @@ export default function Express({ s }: { s: SessionController }) {
           <VoiceInputButton
             onTranscript={handleVoiceTranscript}
             size="sm"
-            title="点击麦克风语音输入（录音只发往你自己配置的识别端点）"
+            title="点击麦克风语音输入（录音发往你自己配置的识别端点）"
           />
         </div>
       </div>
       <div className="row">
-        {EMOTIONS.map((e) => (
-          <button
-            key={e}
-            className="chip"
-            aria-pressed={s.emotion === e}
-            onClick={() => s.setEmotion(s.emotion === e ? undefined : e)}
-          >
-            {e}
-          </button>
-        ))}
+        <button className="primary" onClick={s.submit} disabled={!s.input.trim()}>
+          说完了
+        </button>
       </div>
-      <p className="muted">标签只是给你自己看的，随时可以改。默认不保存原文。</p>
-      <button className="primary" onClick={s.submit} disabled={!s.input.trim()}>说完了</button>
       {s.notice && <p className="muted">{s.notice}</p>}
+      {showPrivacy && (
+        <p className="muted" style={{ fontSize: 11, marginTop: 12 }}>
+          数据只存在这台电脑上，明文、不加密。
+          <button
+            type="button"
+            onClick={dismissPrivacy}
+            style={{ marginLeft: 8, border: 0, background: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', fontSize: 11, padding: 0 }}
+          >
+            知道了
+          </button>
+        </p>
+      )}
     </>
   )
 }

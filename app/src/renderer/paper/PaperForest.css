@@ -585,11 +585,22 @@ body.pf-night .pf-knob .k-moon {
 /* 减少动画：昼夜切换改成一次短促、线性的直接过渡，
    不再有吊杆升降与逐层错开的观感。 */
 @media (prefers-reduced-motion: reduce) {
+  /* 节拍收敛成一次短促、线性的直接过渡：--pf-nd 在这里被改写，
+     吊杆与各层共用同一节拍，不再有升降与逐层错开。 */
   :root {
     --pf-nd: 240ms;
     --pf-nd-ease: linear;
   }
-  .pf-place > svg { animation: none; }
-  .pf-hang .pf-swing, .pf-pins .tw { animation: none; }
-  .pf-night .glint, body.pf-night .glint { animation: none; }
+  /* 一刀切：这个背景里任何持续的装饰动画都停下。
+     原来只点了两个选择器，于是星星闪烁（pf-twinkle）与夜间微光（pf-glint）
+     照旧无限循环——减少动画下界面应当完全静止，不是「少动一点」。
+     .pf-tag-wrap 与 .pf-controls 是 .pf-stage 的兄弟节点，需单独列出。 */
+  .pf-stage,
+  .pf-stage *,
+  .pf-tag-wrap,
+  .pf-tag-wrap *,
+  .pf-controls,
+  .pf-controls * {
+    animation: none !important;
+  }
 }

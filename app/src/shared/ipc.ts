@@ -26,6 +26,7 @@ export const CH = {
     getModelConfig: 'config:getModel',
     saveModelConfig: 'config:saveModel',
     testModelConfig: 'config:testModel',
+    listModels: 'config:listModels',
     discuss: 'reflect:discuss',
     transcribe: 'voice:transcribe',
   },
@@ -50,8 +51,6 @@ export type { RingResonance } from './resonance'
 
 export interface SubmitInput {
   input: string
-  emotion?: string
-  intensity?: string
 }
 export interface SubmitResult {
   sessionId: string
@@ -71,15 +70,17 @@ export interface MicroExperiment {
 }
 
 export interface CognitiveAnalysis {
-  objectiveFact: string
-  subjectiveAssumption: string
-  distortionBadge?: string
-  socraticQuestions?: {
-    guardian?: string
-    explorer?: string
-    outsider?: string
-  }
+  /** 逐字引用自用户输入的原话。可核对，不是推断。 */
+  quotedInput: string[]
+  /** 折返镜读到的前提。属模型推断，界面必须标注为推断。 */
+  assumptions: string[]
+  /** 折返镜提出的替代问题。 */
+  reframedQuestion: string
+  /** 各视角的反问。由模型生成；生成不出来就缺席，不塞通用话术。 */
+  socraticQuestions?: Partial<Record<ReflectionCardId, string>>
+  /** 微行动建议。是建议不是处方，用户可以不采纳。模型没给就缺席。 */
   microExperiment?: MicroExperiment
+  promptVersion: string
 }
 
 export interface ConsentResult {
@@ -134,6 +135,13 @@ export interface TestModelResult {
   message?: string
   error?: string
   latencyMs?: number
+}
+
+export interface ListModelsResult {
+  ok: boolean
+  /** 服务端返回的可用模型 id 列表。失败时为空数组，原因在 error 里。 */
+  models: string[]
+  error?: string
 }
 
 export interface DiscussMessage {
@@ -205,6 +213,7 @@ export interface ForestApi {
   getModelConfig(): Promise<ModelConfigDto>
   saveModelConfig(cfg: ModelConfigDto): Promise<{ ok: boolean }>
   testModelConfig(cfg: ModelConfigDto): Promise<TestModelResult>
+  listModels(cfg: ModelConfigDto): Promise<ListModelsResult>
   discuss(p: DiscussInput): Promise<DiscussResult>
   transcribe(p: TranscribeInput): Promise<TranscribeResult>
 

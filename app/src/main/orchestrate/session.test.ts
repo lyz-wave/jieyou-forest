@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateGate, type RulesFile } from '../gate/gate'
-import rules from '../gate/rules.json'
+import { evaluateGate, type RulesFile } from '../../shared/gate/gate'
+import rules from '../../shared/gate/rules.json'
 import { canEnterReflection, SessionMemory } from './session'
 import { countRings, countSessions } from '../store/repo'
 import { openDatabase } from '../store/db'

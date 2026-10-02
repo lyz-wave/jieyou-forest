@@ -5,8 +5,6 @@ import type { ReviewDraft, RingDraft, RingRow } from '../../shared/types'
 export interface SaveSessionInput {
   id: string
   input: string
-  selectedEmotion?: string
-  selectedIntensity?: string
   mode: 'rest' | 'reflect'
   reflectionConsentAt?: string
   status: string
@@ -16,9 +14,9 @@ export interface SaveSessionInput {
 /** 只在用户按下保存之后调用它。未保存的表达不落库（ADR-0002）。 */
 export function saveSession(db: Database.Database, s: SaveSessionInput): void {
   db.prepare(
-    `INSERT INTO session (id, input, selected_emotion, selected_intensity, mode,
+    `INSERT INTO session (id, input, mode,
        reflection_consent_at, status, is_demo)
-     VALUES (@id, @input, @selectedEmotion, @selectedIntensity, @mode,
+     VALUES (@id, @input, @mode,
        @reflectionConsentAt, @status, @isDemo)
      ON CONFLICT(id) DO UPDATE SET
        input = excluded.input, mode = excluded.mode, status = excluded.status,
@@ -26,8 +24,6 @@ export function saveSession(db: Database.Database, s: SaveSessionInput): void {
   ).run({
     id: s.id,
     input: s.input,
-    selectedEmotion: s.selectedEmotion ?? null,
-    selectedIntensity: s.selectedIntensity ?? null,
     mode: s.mode,
     reflectionConsentAt: s.reflectionConsentAt ?? null,
     status: s.status,

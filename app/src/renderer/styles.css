@@ -125,6 +125,11 @@ html, body {
   touch-action: manipulation;
 }
 
+/* 这里曾经有一层 .vignette（覆盖全屏的奶油色径向渐变），用来把四周的装饰压下去。
+   已移除，原因是实测：初版参数让四周平均色被抬了 46 个通道值（就是"蒙了一层雾"），
+   收紧到 +5 之后它的收益已经微乎其微，而它带来过一次真实的视觉事故。
+   想压背景应该去调背景本身（降饱和/降对比），而不是盖一层纱。 */
+
 .shell {
   max-width: 664px;
   width: 100%;
@@ -316,13 +321,16 @@ input[type="date"] {
   color: inherit;
   border: 0;
   border-radius: var(--r-lg);
-  background: var(--glass-input);
+  /* 它是首屏最主要的交互入口，必须从繁复的背景里立起来：
+     填充更实、边界更清楚，而不只是靠一层很淡的内描边。 */
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(18px) saturate(170%);
   -webkit-backdrop-filter: blur(18px) saturate(170%);
   box-shadow:
     inset 0 1px 0 var(--rim),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.45),
-    0 10px 26px -18px var(--shadow);
+    inset 0 0 0 1px rgba(122, 106, 84, 0.24),
+    0 2px 4px rgba(46, 42, 34, 0.06),
+    0 12px 30px -18px var(--shadow);
   transition: box-shadow var(--t-base) var(--spring), background var(--t-base) linear;
 }
 textarea {

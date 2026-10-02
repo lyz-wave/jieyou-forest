@@ -1,9 +1,28 @@
 import { useState, useEffect } from 'react'
 import type { ModelConfigDto, TestModelResult } from '../../shared/ipc'
 
+/**
+ * 预加载脚本与渲染层的版本可能不同步：
+ * electron-vite dev 下改 preload 需要重开窗口才会生效，而渲染层 HMR 是立刻生效的，
+ * 于是会出现"界面上有新按钮、桥上没有新方法"，报一个裸的 TypeError。
+ * 与其抛错，不如把原因说清楚。
+ */
+function bridgeProblem(method: string): string | null {
+  const api = window.forest as unknown as Record<string, unknown> | undefined
+  if (!api) return '应用桥未就绪，请重启应用。'
+  if (typeof api[method] !== 'function') {
+    return '当前运行的桥接脚本是旧版本（缺少 ' + method + '）。请重启应用，或在窗口里按 Cmd+R 重新加载后再试。'
+  }
+  return null
+}
+
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
+  /** 纸艺舞台的昼夜状态。这两个控件原本挂在首屏上，属于演示向的东西。 */
+  isNight: boolean
+  onToggleNight: (isNight: boolean) => void
+  onRecut: () => void
 }
 
 interface ProviderPreset {
@@ -51,6 +70,20 @@ const PRESETS: ProviderPreset[] = [
     hint: 'SiliconFlow 聚合推理平台，性价比优选',
   },
   {
+    id: 'commandcode',
+    name: 'Command Code',
+    baseUrl: 'https://api.commandcode.ai/provider/v1',
+    model: 'deepseek/deepseek-v4-flash',
+    hint: 'OpenAI 兼容端点；同一个密钥也能给他们的 CLI 用',
+  },
+  {
+    id: 'opencode',
+    name: 'OpenCode Zen',
+    baseUrl: 'https://opencode.ai/zen/v1',
+    model: 'deepseek-v4-flash',
+    hint: 'OpenCode 官方精选模型网关，兼容 Chat Completions',
+  },
+  {
     id: 'custom',
     name: '自定义中转站 / OneAPI',
     baseUrl: '',
@@ -59,7 +92,7 @@ const PRESETS: ProviderPreset[] = [
   },
 ]
 
-export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export default function SettingsModal({ isOpen, onClose, isNight, onToggleNight, onRecut }: SettingsModalProps) {
   const [config, setConfig] = useState<ModelConfigDto>({
     baseUrl: 'https://api.deepseek.com/v1',
     model: 'deepseek-chat',
@@ -70,6 +103,11 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<TestModelResult | null>(null)
   const [savedNotice, setSavedNotice] = useState(false)
+  /** 从端点拉回来的可用模型 id。空表示还没拉或拉失败。 */
+  const [models, setModels] = useState<string[]>([])
+  const [loadingModels, setLoadingModels] = useState(false)
+  const [modelsError, setModelsError] = useState<string | null>(null)
+  const [modelFilter, setModelFilter] = useState('')
 
   useEffect(() => {
     if (isOpen && window.forest?.getModelConfig) {
@@ -109,6 +147,11 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   }
 
   const handleTest = async () => {
+    const problem = bridgeProblem('testModelConfig')
+    if (problem) {
+      setTestResult({ ok: false, error: problem })
+      return
+    }
     setTesting(true)
     setTestResult(null)
     try {
@@ -121,6 +164,27 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       })
     } finally {
       setTesting(false)
+    }
+  }
+
+  const handleFetchModels = async () => {
+    const problem = bridgeProblem('listModels')
+    if (problem) {
+      setModels([])
+      setModelsError(problem)
+      return
+    }
+    setLoadingModels(true)
+    setModelsError(null)
+    try {
+      const res = await window.forest.listModels(config)
+      setModels(res.models)
+      if (!res.ok) setModelsError(res.error || '获取模型列表失败')
+    } catch (err: any) {
+      setModels([])
+      setModelsError(err.message || '获取模型列表异常')
+    } finally {
+      setLoadingModels(false)
     }
   }
 
@@ -295,9 +359,21 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* Model Name */}
           <div>
-            <label className="field" style={{ marginBottom: 4, display: 'block' }}>
-              Model (模型标识名称)
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <label className="field" style={{ margin: 0 }}>
+                Model (模型标识名称)
+              </label>
+              <button
+                type="button"
+                className="chip"
+                onClick={handleFetchModels}
+                disabled={loadingModels || !config.baseUrl?.trim()}
+                title="向该端点请求 GET /models（本地 Ollama 也能用）"
+                style={{ fontSize: 11, padding: '3px 10px', cursor: 'pointer' }}
+              >
+                {loadingModels ? '获取中…' : '获取模型列表'}
+              </button>
+            </div>
             <input
               type="text"
               value={config.model}
@@ -312,6 +388,80 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 fontSize: 13,
               }}
             />
+
+            {modelsError && (
+              <p style={{ margin: '6px 0 0', fontSize: 11, color: '#b03025' }}>获取失败：{modelsError}</p>
+            )}
+
+            {models.length > 0 && (
+              <div
+                style={{
+                  marginTop: 8,
+                  border: '1px solid rgba(180, 160, 130, 0.35)',
+                  borderRadius: 10,
+                  background: 'rgba(255, 255, 255, 0.72)',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 10px',
+                    borderBottom: '1px solid rgba(180, 160, 130, 0.25)',
+                  }}
+                >
+                  <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                    {models.length} 个模型
+                  </span>
+                  {models.length > 8 && (
+                    <input
+                      type="text"
+                      value={modelFilter}
+                      onChange={(e) => setModelFilter(e.target.value)}
+                      placeholder="筛选…"
+                      style={{
+                        flex: 1,
+                        fontSize: 11,
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        border: '1px solid rgba(180, 160, 130, 0.35)',
+                        background: '#fff',
+                      }}
+                    />
+                  )}
+                </div>
+                <div style={{ maxHeight: 168, overflowY: 'auto' }}>
+                  {models
+                    .filter((m) => m.toLowerCase().includes(modelFilter.trim().toLowerCase()))
+                    .map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => {
+                          setConfig({ ...config, model: m })
+                          setModelFilter('')
+                        }}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '7px 12px',
+                          fontSize: 12,
+                          border: 0,
+                          cursor: 'pointer',
+                          background: config.model === m ? 'rgba(74, 141, 92, 0.14)' : 'transparent',
+                          color: config.model === m ? '#2d6a3f' : 'inherit',
+                          fontWeight: config.model === m ? 600 : 400,
+                        }}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 语音识别模型（可选） */}
@@ -380,11 +530,42 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             lineHeight: 1.5,
           }}
         >
-          🔒 <strong>隐私说明：</strong>
-          密钥与请求地址仅保存在本机（SQLite / localStorage），应用直接与你的目标端点通信，零中转。
-          未配置 API 时可离线完整使用所有舒缓与年轮功能；
+          🔒 <strong>隐私与安全承诺：</strong>
+          密钥与请求地址仅保存在本机（SQLite / localStorage），且<strong>明文、不加密</strong>——
+          能访问这台电脑文件系统的人就能读到。请不要在这台机器上使用你不放心外泄的密钥。
+          应用直接通过本地网络与你的目标端点发起通信，零中转、零云端留存。即便完全不配置 API，也能离线完整使用所有舒缓与年轮功能。
           <strong>只有语音输入例外</strong>——按麦克风录下的音频会发往上面填写的端点做转写，
           除此之外不会上传任何内容。
+        </div>
+
+        {/* 纸艺舞台：原本挂在首屏上的两个控件搬到了这里。
+            它们只影响背景观感，与用户写的内容无关，所以不该占据首屏。 */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(180, 160, 130, 0.25)' }}>
+          <label className="field" style={{ marginBottom: 8, display: 'block', fontSize: 12, fontWeight: 600 }}>
+            纸艺舞台
+          </label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="chip"
+              onClick={() => onToggleNight(!isNight)}
+              aria-pressed={isNight}
+              style={{ fontSize: 12, padding: '5px 11px' }}
+            >
+              {isNight ? '切换到白昼' : '切换到静夜'}
+            </button>
+            <button
+              type="button"
+              className="chip"
+              onClick={onRecut}
+              style={{ fontSize: 12, padding: '5px 11px' }}
+            >
+              重剪森林剪影
+            </button>
+          </div>
+          <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--muted)' }}>
+            这两项只影响背景观感，与你的内容无关。
+          </p>
         </div>
 
         {/* 操作栏 */}

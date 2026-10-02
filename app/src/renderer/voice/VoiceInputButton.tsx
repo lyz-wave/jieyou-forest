@@ -60,7 +60,9 @@ export default function VoiceInputButton({
   disabled = false,
   className = '',
   size = 'md',
-  title = '语音输入（录音只发往你自己配置的识别端点）',
+  // 文案必须是实话：主链路（window.forest.transcribe）把录音发往用户自己配置的
+  // 识别端点；只有退回 Web Speech 时才会交给系统/浏览器的识别服务（通常联网）。
+  title = '语音输入（录音发往你自己配置的识别端点；退回系统识别时会联网）',
 }: VoiceInputButtonProps) {
   const [mode, setMode] = useState<Mode>('idle')
   const [tip, setTip] = useState('')
@@ -206,7 +208,7 @@ export default function VoiceInputButton({
   const startWebSpeech = useCallback(() => {
     const Ctor = speechRecognitionCtor()
     if (!Ctor) {
-      flashTip('当前运行环境不支持语音识别')
+      flashTip('当前运行环境不支持语音识别（Electron 打包版通常不可用）')
       return
     }
     try {

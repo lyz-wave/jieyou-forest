@@ -6,6 +6,8 @@ interface PaperForestProps {
   initialNight?: boolean
   onToggleNight?: (isNight: boolean) => void
   showControls?: boolean
+  /** 外部触发重剪：数值变化即重新下剪一次。用于把控件搬进设置后仍能触发。 */
+  recutSignal?: number
 }
 
 // 纯函数 Mulberry32 伪随机种子生成器
@@ -23,13 +25,40 @@ export default function PaperForest({
   initialNight = false,
   onToggleNight,
   showControls = true,
+  recutSignal,
 }: PaperForestProps) {
   const [isNight, setIsNight] = useState(initialNight)
+
+  // 这个 prop 是受控的：设置里的开关改了它，舞台必须跟着变。
+  // 原来只当成初始值（useState(initialNight)），挂载之后再改 prop 完全没反应——
+  // 控件搬进设置之后，昼夜开关就变成了一个点了不动的按钮。
+  useEffect(() => {
+    setIsNight(initialNight)
+  }, [initialNight])
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const tagWrapRef = useRef<HTMLDivElement>(null)
   const foxBtnRef = useRef<HTMLButtonElement>(null)
   const leavesRef = useRef<HTMLDivElement>(null)
+
+  /**
+   * 系统的"减少动画"开关。
+   *
+   * 此前只有两条 CSS 规则生效（剪纸入场与吊挂摆动），而 RAF 主循环驱动的
+   * 视差、落叶、狐狸跳跃、夜间飞虫照旧在跑——这违反 PRD F04 与票 #12 的验收。
+   * 这里把"动的来源"逐一切断，而不是去重写那个 1600 行的循环。
+   */
+  const reducedRef = useRef(false)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    reducedRef.current = mq.matches
+    const onChange = (): void => {
+      reducedRef.current = mq.matches
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   // 内部动画和渲染状态存储
   const stateRef = useRef<{
@@ -1041,6 +1070,7 @@ export default function PaperForest({
   // 狐狸起跳
   const hop = useCallback(() => {
     const s = stateRef.current
+    if (reducedRef.current) return
     if (s.fox.hop) return
     const minX = s.W * 0.12
     const maxX = s.W * 0.88
@@ -1094,7 +1124,8 @@ export default function PaperForest({
       'M0 -9C3 -7 4.5 -3 3.5 0C5 2 4 6 0 9C-4 6 -5 2 -3.5 0C-4.5 -3 -3 -7 0 -9Z',
     ]
     const leafCls = ['lf-a', 'lf-b', 'lf-c', 'lf-a', 'lf-b']
-    const n = 18
+    // 减少动画时一片都不生成；点击落叶也走同一条 s.leaves 列表，所以一并失效
+    const n = reducedRef.current ? 0 : 18
     let html = ''
     for (let i = 0; i < n; i++) {
       html += `<div class="pf-leaf"><svg viewBox="-10 -10 20 20" width="20" height="20"><path class="${leafCls[i % 5]}" d="${leafShapes[i % 3]}"/><path class="lf-v" d="M0 -7V8"/></svg></div>`
@@ -1234,6 +1265,14 @@ export default function PaperForest({
     stateRef.current.tagV -= 24
   }, [build])
 
+  // 外部触发重剪。控件搬进设置之后走这条路径；只在数值真正变化时触发，挂载时不重剪。
+  const lastRecutSignal = useRef(recutSignal)
+  useEffect(() => {
+    if (recutSignal === undefined || lastRecutSignal.current === recutSignal) return
+    lastRecutSignal.current = recutSignal
+    recut()
+  }, [recutSignal, recut])
+
   // 主循环初始化与挂载
   useEffect(() => {
     const s = stateRef.current
@@ -1272,7 +1311,7 @@ export default function PaperForest({
       // 2. 行李签摆动
       const tagWrap = tagWrapRef.current
       if (tagWrap) {
-        const rest = -2.2 + Math.sin(s.clock * 0.6) * 0.6
+        const rest = reducedRef.current ? -2.2 : -2.2 + Math.sin(s.clock * 0.6) * 0.6
         s.tagV += (-(s.tagA - rest) * 26 - s.tagV * 2.6) * dt
         s.tagA += s.tagV * dt
         s.tagA = Math.max(-16, Math.min(16, s.tagA))
@@ -1281,6 +1320,9 @@ export default function PaperForest({
 
       // 3. 树叶物理
       for (const l of s.leaves) {
+        // 减少动画时已生成的叶子也不再飘。挂载时就开着的话根本不会有叶子
+        // （makeLeaves 生成 0 片），但系统设置可能在使用中改变，那时叶子已经存在。
+        if (reducedRef.current) continue
         if (!l.on) continue
         l.vy += (30 - l.vy) * dt * 1.4
         l.vx += (14 - l.vx) * dt * 0.8
@@ -1338,6 +1380,7 @@ export default function PaperForest({
         }
       }
       for (const p of s.puffs) {
+        if (reducedRef.current) continue // 减少动画时已生成的云絮也停下
         if (!p || p.t >= 1) continue
         p.t += dt * 1.8
         p.x += p.vx * dt
@@ -1361,6 +1404,7 @@ export default function PaperForest({
           fx.clearRect(-s.M, -s.M, s.W + 2 * s.M, s.H + 2 * s.M)
           const na = s.nightAmt
           for (const f of s.flies) {
+            if (reducedRef.current) continue // 减少动画时飞虫不再游动
             f.a += Math.sin(s.clock * 0.7 + f.ph) * 1.6 * dt
             let vx = Math.cos(f.a) * f.sp
             let vy = Math.sin(f.a) * f.sp * 0.6
@@ -1403,6 +1447,7 @@ export default function PaperForest({
 
     // 输入事件
     const onPointerMove = (e: PointerEvent) => {
+      if (reducedRef.current) return
       const now = performance.now()
       if (e.pointerType === 'mouse' && !s.drag) {
         s.tx = Math.max(-1, Math.min(1, (e.clientX / s.W - 0.5) * 2))
@@ -1438,6 +1483,7 @@ export default function PaperForest({
     }
 
     const onDeviceOrientation = (e: DeviceOrientationEvent) => {
+      if (reducedRef.current) return
       if (e.gamma !== null && e.beta !== null && !s.drag) {
         const tx = Math.max(-1, Math.min(1, e.gamma / 25))
         const ty = Math.max(-1, Math.min(1, (e.beta - 45) / 25))
@@ -1448,6 +1494,7 @@ export default function PaperForest({
     }
 
     const onClick = (e: MouseEvent) => {
+      if (reducedRef.current) return
       if (e.target === foxBtnRef.current) return
       const f = Math.pow(7.7 / 8, 1.15) * s.S
       leafBurst(e.clientX + s.px * f, e.clientY + s.py * f * 0.55)

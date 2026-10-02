@@ -1,7 +1,7 @@
-import type { SafetyLevel } from '../../shared/types'
+import type { SafetyLevel } from '../types'
 
 // 能力映射住在 shared（渲染进程也要用同一份），这里只把它转出去。
-export { capabilitiesFor } from '../../shared/capabilities'
+export { capabilitiesFor } from '../capabilities'
 
 export interface GateRule {
   id: string
