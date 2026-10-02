@@ -1229,13 +1229,21 @@ export default function PaperForest({
 
   // 昼夜切换处理
   const toggleNight = useCallback(() => {
-    setIsNight((prev) => {
-      const next = !prev
-      stateRef.current.tagV += 18
-      if (onToggleNight) onToggleNight(next)
-      return next
-    })
-  }, [onToggleNight])
+    // state updater 必须是纯函数。原来把 onToggleNight 塞在里面，
+    // React 重复调用 updater 时（StrictMode、并发渲染）会向父组件触发两次。
+    stateRef.current.tagV += 18
+    setIsNight((prev) => !prev)
+  }, [])
+
+  // 通知父组件改到 effect 里。跳过首次，避免挂载时把初始值又推回去。
+  const nightNotified = useRef(false)
+  useEffect(() => {
+    if (!nightNotified.current) {
+      nightNotified.current = true
+      return
+    }
+    if (onToggleNight) onToggleNight(isNight)
+  }, [isNight, onToggleNight])
 
   // 同步昼夜类名至 document.body
   useEffect(() => {
