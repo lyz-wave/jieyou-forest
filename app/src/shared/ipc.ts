@@ -26,6 +26,7 @@ export const CH = {
     getModelConfig: 'config:getModel',
     saveModelConfig: 'config:saveModel',
     testModelConfig: 'config:testModel',
+    listModels: 'config:listModels',
     discuss: 'reflect:discuss',
   },
   send: {
@@ -122,6 +123,13 @@ export interface TestModelResult {
   latencyMs?: number
 }
 
+export interface ListModelsResult {
+  ok: boolean
+  /** 服务端返回的可用模型 id 列表。失败时为空数组，原因在 error 里。 */
+  models: string[]
+  error?: string
+}
+
 export interface DiscussMessage {
   role: 'user' | 'assistant'
   content: string
@@ -191,6 +199,7 @@ export interface ForestApi {
   getModelConfig(): Promise<ModelConfigDto>
   saveModelConfig(cfg: ModelConfigDto): Promise<{ ok: boolean }>
   testModelConfig(cfg: ModelConfigDto): Promise<TestModelResult>
+  listModels(cfg: ModelConfigDto): Promise<ListModelsResult>
   discuss(p: DiscussInput): Promise<DiscussResult>
 
   onReceive(cb: (p: ReceiveChunk) => void): () => void

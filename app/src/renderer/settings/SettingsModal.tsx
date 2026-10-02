@@ -70,6 +70,11 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<TestModelResult | null>(null)
   const [savedNotice, setSavedNotice] = useState(false)
+  /** 从端点拉回来的可用模型 id。空表示还没拉或拉失败。 */
+  const [models, setModels] = useState<string[]>([])
+  const [loadingModels, setLoadingModels] = useState(false)
+  const [modelsError, setModelsError] = useState<string | null>(null)
+  const [modelFilter, setModelFilter] = useState('')
 
   useEffect(() => {
     if (isOpen && window.forest?.getModelConfig) {
@@ -118,6 +123,21 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       })
     } finally {
       setTesting(false)
+    }
+  }
+
+  const handleFetchModels = async () => {
+    setLoadingModels(true)
+    setModelsError(null)
+    try {
+      const res = await window.forest.listModels(config)
+      setModels(res.models)
+      if (!res.ok) setModelsError(res.error || '获取模型列表失败')
+    } catch (err: any) {
+      setModels([])
+      setModelsError(err.message || '获取模型列表异常')
+    } finally {
+      setLoadingModels(false)
     }
   }
 
@@ -292,9 +312,21 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* Model Name */}
           <div>
-            <label className="field" style={{ marginBottom: 4, display: 'block' }}>
-              Model (模型标识名称)
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <label className="field" style={{ margin: 0 }}>
+                Model (模型标识名称)
+              </label>
+              <button
+                type="button"
+                className="chip"
+                onClick={handleFetchModels}
+                disabled={loadingModels || !config.baseUrl?.trim()}
+                title="向该端点请求 GET /models（本地 Ollama 也能用）"
+                style={{ fontSize: 11, padding: '3px 10px', cursor: 'pointer' }}
+              >
+                {loadingModels ? '获取中…' : '获取模型列表'}
+              </button>
+            </div>
             <input
               type="text"
               value={config.model}
@@ -309,6 +341,80 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 fontSize: 13,
               }}
             />
+
+            {modelsError && (
+              <p style={{ margin: '6px 0 0', fontSize: 11, color: '#b03025' }}>获取失败：{modelsError}</p>
+            )}
+
+            {models.length > 0 && (
+              <div
+                style={{
+                  marginTop: 8,
+                  border: '1px solid rgba(180, 160, 130, 0.35)',
+                  borderRadius: 10,
+                  background: 'rgba(255, 255, 255, 0.72)',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 10px',
+                    borderBottom: '1px solid rgba(180, 160, 130, 0.25)',
+                  }}
+                >
+                  <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                    {models.length} 个模型
+                  </span>
+                  {models.length > 8 && (
+                    <input
+                      type="text"
+                      value={modelFilter}
+                      onChange={(e) => setModelFilter(e.target.value)}
+                      placeholder="筛选…"
+                      style={{
+                        flex: 1,
+                        fontSize: 11,
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        border: '1px solid rgba(180, 160, 130, 0.35)',
+                        background: '#fff',
+                      }}
+                    />
+                  )}
+                </div>
+                <div style={{ maxHeight: 168, overflowY: 'auto' }}>
+                  {models
+                    .filter((m) => m.toLowerCase().includes(modelFilter.trim().toLowerCase()))
+                    .map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => {
+                          setConfig({ ...config, model: m })
+                          setModelFilter('')
+                        }}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '7px 12px',
+                          fontSize: 12,
+                          border: 0,
+                          cursor: 'pointer',
+                          background: config.model === m ? 'rgba(74, 141, 92, 0.14)' : 'transparent',
+                          color: config.model === m ? '#2d6a3f' : 'inherit',
+                          fontWeight: config.model === m ? 600 : 400,
+                        }}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

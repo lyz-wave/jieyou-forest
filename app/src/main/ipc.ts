@@ -11,7 +11,7 @@ import {
 } from '../shared/ipc'
 import rules from '../shared/gate/rules.json'
 import { applyCorrection, capabilitiesFor, evaluateGate, type RulesFile } from '../shared/gate/gate'
-import { createModelClient, loadConfig, testConnection, type ModelClient } from '../shared/model/client'
+import { createModelClient, listModels, loadConfig, testConnection, type ModelClient } from '../shared/model/client'
 import { runReceive } from '../shared/orchestrate/receive'
 import { runReflection, type ThreeViews } from '../shared/orchestrate/reflection'
 import { canEnterReflection, SessionMemory } from './orchestrate/session'
@@ -232,6 +232,16 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(CH.invoke.testModelConfig, async (_e, cfg: ModelConfigDto) => {
     return await testConnection({
       apiKey: cfg.apiKey,
+      baseUrl: cfg.baseUrl,
+      model: cfg.model,
+      receiveTimeoutMs: cfg.receiveTimeoutMs ?? 45_000,
+      reflectTimeoutMs: cfg.reflectTimeoutMs ?? 30_000,
+    })
+  })
+
+  ipcMain.handle(CH.invoke.listModels, async (_e, cfg: ModelConfigDto) => {
+    return await listModels({
+      apiKey: cfg.apiKey?.trim() || undefined,
       baseUrl: cfg.baseUrl,
       model: cfg.model,
       receiveTimeoutMs: cfg.receiveTimeoutMs ?? 45_000,

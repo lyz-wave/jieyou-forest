@@ -1,4 +1,4 @@
-import type { DiscussInput, TestModelResult } from '../ipc'
+import type { DiscussInput, ListModelsResult, TestModelResult } from '../ipc'
 import type { ThreeViews } from '../orchestrate/reflection'
 
 export interface ModelConfig {
@@ -44,6 +44,61 @@ export function normalizeChatUrl(baseUrl: string): string {
     }
   } catch {}
   return `${clean}/chat/completions`
+}
+
+/**
+ * 取 /models 的地址。复用 chat 的归一化逻辑，只把结尾的 /chat/completions 换成 /models——
+ * 这样 DeepSeek、OpenAI、智谱 v4、DashScope 兼容模式、Ollama、各类中转站都能落到对的位置。
+ */
+export function normalizeModelsUrl(baseUrl: string): string {
+  return normalizeChatUrl(baseUrl).replace(/\/chat\/completions$/, '/models')
+}
+
+/**
+ * 拉取服务端可用模型列表。
+ * 兼容两种返回：OpenAI 系的 { data: [{ id }] }，以及 Ollama 原生的 { models: [{ name }] }。
+ */
+export async function listModels(cfg: ModelConfig): Promise<ListModelsResult> {
+  // 不强制要求密钥：本地 Ollama 之类本来就没有密钥，让端点自己回答。
+  const url = normalizeModelsUrl(cfg.baseUrl)
+  const key = cfg.apiKey?.trim()
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 15_000)
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: key ? { authorization: 'Bearer ' + key } : {},
+      signal: controller.signal,
+    })
+    clearTimeout(timer)
+    if (!res.ok) {
+      let body = ''
+      try {
+        body = await res.text()
+      } catch {}
+      return {
+        ok: false,
+        models: [],
+        error: 'HTTP ' + res.status + ': ' + res.statusText + (body ? ' - ' + body.slice(0, 160) : ''),
+      }
+    }
+    const json = (await res.json()) as {
+      data?: Array<{ id?: string }>
+      models?: Array<{ id?: string; name?: string; model?: string }>
+    }
+    const fromData = (json.data ?? []).map((m) => m.id).filter((x): x is string => Boolean(x))
+    const fromModels = (json.models ?? [])
+      .map((m) => m.id ?? m.name ?? m.model)
+      .filter((x): x is string => Boolean(x))
+    const models = Array.from(new Set([...fromData, ...fromModels])).sort()
+    if (models.length === 0) {
+      return { ok: false, models: [], error: '端点返回成功，但没有解析到任何模型 id' }
+    }
+    return { ok: true, models }
+  } catch (err) {
+    const msg = (err as Error).name === 'AbortError' ? '请求超时 (15s)' : (err as Error).message || '网络连接失败'
+    return { ok: false, models: [], error: msg }
+  }
 }
 
 export async function testConnection(cfg: ModelConfig): Promise<TestModelResult> {

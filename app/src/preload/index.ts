@@ -30,6 +30,7 @@ const api: ForestApi = {
   getModelConfig: () => invoke(CH.invoke.getModelConfig),
   saveModelConfig: (cfg) => invoke(CH.invoke.saveModelConfig, cfg),
   testModelConfig: (cfg) => invoke(CH.invoke.testModelConfig, cfg),
+  listModels: (cfg) => invoke(CH.invoke.listModels, cfg),
   discuss: (p) => invoke(CH.invoke.discuss, p),
 
   onReceive: (cb) => subscribe(CH.send.receive, cb),

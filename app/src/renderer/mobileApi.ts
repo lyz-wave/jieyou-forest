@@ -1,6 +1,7 @@
 import type {
   BannerResult,
   CognitiveAnalysis,
+  ListModelsResult,
   ConsentResult,
   CorrectResult,
   DeleteResult,
@@ -26,7 +27,7 @@ import { capabilitiesFor } from '../shared/capabilities'
 import { findResonantRing } from '../shared/resonance'
 import rules from '../shared/gate/rules.json'
 import { applyCorrection, evaluateGate, type GateResult, type RulesFile } from '../shared/gate/gate'
-import { createModelClient } from '../shared/model/client'
+import { createModelClient, listModels } from '../shared/model/client'
 import { runReceive } from '../shared/orchestrate/receive'
 import { runReflection } from '../shared/orchestrate/reflection'
 
@@ -274,6 +275,17 @@ export function createMobileForestApi(): ForestApi {
       rings = []
       saveRingsToStorage(rings)
       return { empty: true }
+    },
+
+    async listModels(cfg: ModelConfigDto): Promise<ListModelsResult> {
+      // 与桌面端共用同一个实现：同一个地址归一化、同一套返回解析
+      return listModels({
+        apiKey: cfg.apiKey?.trim() || undefined,
+        baseUrl: cfg.baseUrl,
+        model: cfg.model,
+        receiveTimeoutMs: cfg.receiveTimeoutMs ?? 45_000,
+        reflectTimeoutMs: cfg.reflectTimeoutMs ?? 30_000,
+      })
     },
 
     async getModelConfig(): Promise<ModelConfigDto> {
