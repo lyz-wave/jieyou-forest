@@ -97,6 +97,7 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
       }, 10)
       return { ok: true, reply: '这是苏格拉底反问回应' }
     },
+    transcribe: async () => ({ ok: true, text: '' }),
     onReceive: (cb) => { receiveListeners.push(cb); return () => {} },
     onReflection: (cb) => { reflectionListeners.push(cb); return () => {} },
     onDiscussionDelta: (cb) => {

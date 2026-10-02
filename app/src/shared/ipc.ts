@@ -27,6 +27,7 @@ export const CH = {
     saveModelConfig: 'config:saveModel',
     testModelConfig: 'config:testModel',
     discuss: 'reflect:discuss',
+    transcribe: 'voice:transcribe',
   },
   send: {
     receive: 'stream:receive',
@@ -109,8 +110,23 @@ export interface ModelConfigDto {
   apiKey?: string
   baseUrl: string
   model: string
+  /** 语音转文字的模型。留空则按 baseUrl 推断（shared/asr.ts: defaultAsrModel）。 */
+  asrModel?: string
   receiveTimeoutMs?: number
   reflectTimeoutMs?: number
+}
+
+export interface TranscribeInput {
+  /** 录音字节。走结构化克隆，不是 base64，避免大段字符串在 IPC 上翻倍。 */
+  audio: Uint8Array
+  /** 录音的 MIME 类型，决定文件名后缀 */
+  mimeType: string
+}
+
+export interface TranscribeResult {
+  ok: boolean
+  text?: string
+  error?: string
 }
 
 export interface TestModelResult {
@@ -190,6 +206,7 @@ export interface ForestApi {
   saveModelConfig(cfg: ModelConfigDto): Promise<{ ok: boolean }>
   testModelConfig(cfg: ModelConfigDto): Promise<TestModelResult>
   discuss(p: DiscussInput): Promise<DiscussResult>
+  transcribe(p: TranscribeInput): Promise<TranscribeResult>
 
   onReceive(cb: (p: ReceiveChunk) => void): () => void
   onReflection(cb: (p: ReflectionChunk) => void): () => void

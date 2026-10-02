@@ -18,11 +18,14 @@ import type {
   SubmitInput,
   SubmitResult,
   TestModelResult,
+  TranscribeInput,
+  TranscribeResult,
   VerdictEvent,
 } from '../shared/ipc'
 import type { ReviewDraft, RingRow } from '../shared/types'
 import { capabilitiesFor } from '../shared/capabilities'
 import { findResonantRing } from '../shared/resonance'
+import { transcribeAudio } from '../shared/asr'
 
 const STORAGE_KEY = 'jieyou_rings_v1'
 const CONFIG_KEY = 'jieyou_model_config_v1'
@@ -258,6 +261,32 @@ export function createMobileForestApi(): ForestApi {
         return { ok: true, latencyMs, message: `连接成功，延迟 ${latencyMs}ms` }
       } catch (err: any) {
         return { ok: false, latencyMs: Date.now() - start, error: err.message || '网络连接失败' }
+      }
+    },
+
+    // 移动端/浏览器形态没有主进程，直接在渲染层调同一个 shared/asr.ts。
+    async transcribe(p: TranscribeInput): Promise<TranscribeResult> {
+      if (!p?.audio || !p.audio.byteLength) {
+        return { ok: false, error: '没有录到声音' }
+      }
+      if (!modelConfig.apiKey?.trim()) {
+        return { ok: false, error: '还没有配置 API Key：语音识别要走你在「模型设置」里填写的端点' }
+      }
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 60_000)
+      try {
+        const text = await transcribeAudio({
+          audio: new Uint8Array(p.audio),
+          mimeType: p.mimeType,
+          config: { baseUrl: modelConfig.baseUrl, apiKey: modelConfig.apiKey, model: modelConfig.asrModel },
+          signal: controller.signal,
+        })
+        return { ok: true, text }
+      } catch (err: any) {
+        const msg = err?.name === 'AbortError' ? '识别超时（60 秒）' : err?.message || '语音识别失败'
+        return { ok: false, error: msg }
+      } finally {
+        clearTimeout(timer)
       }
     },
 

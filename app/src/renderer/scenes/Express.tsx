@@ -34,7 +34,7 @@ export default function Express({ s }: { s: SessionController }) {
           <VoiceInputButton
             onTranscript={handleVoiceTranscript}
             size="sm"
-            title="点击麦克风语音输入（纯本地识别，不上传云端）"
+            title="点击麦克风语音输入（录音只发往你自己配置的识别端点）"
           />
         </div>
       </div>

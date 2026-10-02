@@ -10,3 +10,7 @@ mac:
   target:
     - dir
   identity: null
+  # 语音输入要录音。缺这条 macOS 会直接拒掉 getUserMedia，
+  # 而且是静默失败，表现就是「点了麦克风没反应」。
+  extendInfo:
+    NSMicrophoneUsageDescription: 解忧森林需要用麦克风，把你说的话转成文字。录音只发送到你自己配置的识别端点。

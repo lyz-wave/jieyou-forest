@@ -14,6 +14,14 @@
   --pf-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", "Songti SC", "SimSun", Georgia, serif;
   --pf-shade: rgba(58, 38, 18, 0.34);
   --pf-edge: rgba(255, 250, 236, 0.5);
+
+  /* 昼夜过渡的唯一步调。
+     所有随昼夜变化的属性必须共用这两个 token：一旦各改各的（过去是
+     340ms / 750ms / 1s / 1.2s / 1.3s / 1.4s / 1.5s 七种时长，外加逐层
+     0~200ms 的延迟），天空、九层剪纸、吊杆、卡片就会先后错开地变，
+     看上去就是「界面在闪」。 */
+  --pf-nd: 720ms;
+  --pf-nd-ease: cubic-bezier(0.33, 0, 0.18, 1);
 }
 
 .pf-night,
@@ -45,7 +53,7 @@ body.pf-night {
   position: absolute;
   inset: 0;
   opacity: 0;
-  transition: opacity 1.5s ease;
+  transition: opacity var(--pf-nd) var(--pf-nd-ease);
   background: radial-gradient(95% 70% at 70% 20%, #3a3f8a 0%, #252a69 36%, #161a45 72%, #10132f 100%);
 }
 
@@ -61,7 +69,7 @@ body.pf-night .pf-sky-night {
   height: 100%;
   opacity: 0.16;
   pointer-events: none;
-  transition: opacity 0.8s ease;
+  transition: opacity var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-pins {
@@ -70,7 +78,7 @@ body.pf-night .pf-sky-night {
   width: 100%;
   height: 100%;
   opacity: 0;
-  transition: opacity 1s ease 0.2s;
+  transition: opacity var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-night .pf-pins,
@@ -118,19 +126,22 @@ body.pf-night .pf-pins {
   to { transform: none; opacity: 1; }
 }
 
+/* 剪纸层里每一片都随昼夜换色。这里刻意不加逐层延迟（--d）：
+   九层错开着换色，叠在一起就是一层一层地闪。
+   也不为 stroke 声明过渡——这些图层里没有任何描边随昼夜变化，
+   多声明一条只是让浏览器每帧多做一次无用的样式比对。 */
 .pf-layer path,
 .pf-layer circle,
 .pf-layer ellipse {
-  transition: fill 0.75s cubic-bezier(0.4, 0, 0.2, 1) var(--d, 0s),
-              opacity 0.75s ease var(--d, 0s),
-              stroke 0.75s ease var(--d, 0s);
+  transition: fill var(--pf-nd) var(--pf-nd-ease),
+              opacity var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-grain {
   fill: url(#pfGrainPat);
   opacity: 0.14;
   pointer-events: none;
-  transition: opacity 0.75s ease;
+  transition: opacity var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-night .pf-grain,
@@ -185,8 +196,10 @@ body.pf-night .pf-sky-grain {
   top: 0;
   will-change: transform;
   transform: translate3d(0, 0, 0);
-  transition: transform 1.3s cubic-bezier(0.45, -0.25, 0.2, 1.15);
-  transition-delay: var(--hd, 0s);
+  /* 原来这条曲线带「先反向预备再越界回弹」：y1 = -0.25、y2 = 1.15，
+     十一个吊件又在 --hd 上错开，切换时整片天空的太阳、云、月亮、星
+     会一起来回晃，这是最像「闪」的一处。改成与全场景同一条缓动。 */
+  transition: transform var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-hang .pf-swing {
@@ -204,6 +217,7 @@ body.pf-night .pf-sky-grain {
   margin-left: -0.5px;
   height: var(--len);
   background: linear-gradient(rgba(74, 54, 34, 0.25), rgba(74, 54, 34, 0.6));
+  transition: background var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-night .pf-hang .pf-string,
@@ -274,7 +288,7 @@ body.pf-night .pf-hang.nite {
 .lf-c { fill: #9bb89b; } .pf-night .lf-c, body.pf-night .lf-c { fill: #4a569a; }
 .lf-v { fill: none; stroke: rgba(255, 246, 226, 0.55); stroke-width: 0.7; }
 .pf-night .lf-v, body.pf-night .lf-v { stroke: rgba(210, 210, 255, 0.3); }
-.pf-leaf path { transition: fill 1.2s ease 0.6s; }
+.pf-leaf path { transition: fill var(--pf-nd) var(--pf-nd-ease); }
 
 #pfFlies { pointer-events: none; }
 
@@ -283,7 +297,7 @@ body.pf-night .pf-hang.nite {
   inset: 0;
   pointer-events: none;
   box-shadow: inset 0 0 16vmin rgba(60, 36, 14, 0.22);
-  transition: box-shadow 1.4s ease;
+  transition: box-shadow var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-night .pf-vignette,
@@ -332,6 +346,7 @@ body.pf-night .pf-vignette {
   width: 1px;
   height: clamp(20px, 4vh, 48px);
   background: linear-gradient(rgba(74, 54, 34, 0.2), rgba(74, 54, 34, 0.7));
+  transition: background var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-night .pf-tag-string,
@@ -349,7 +364,7 @@ body.pf-night .pf-tag-string {
   color: var(--pf-ink);
   font-family: var(--pf-serif);
   clip-path: polygon(24% 0, 76% 0, 100% 16%, 100% 100%, 0 100%, 0 16%);
-  transition: background-color 1.2s ease, color 1.2s ease;
+  transition: background-color var(--pf-nd) var(--pf-nd-ease), color var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-night .pf-tag,
@@ -391,7 +406,7 @@ body.pf-night .pf-tag {
   border-radius: 50%;
   background: #1f3a3c;
   box-shadow: 0 0 0 3px var(--pf-ochre), 0 0 0 4px rgba(90, 56, 24, 0.35);
-  transition: background-color 1.2s ease;
+  transition: background-color var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-night .pf-tag-hole,
@@ -407,6 +422,7 @@ body.pf-night .pf-tag-hole {
   height: 22px;
   margin-left: -0.5px;
   background: rgba(74, 54, 34, 0.7);
+  transition: background var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-night .pf-tag-knot,
@@ -420,6 +436,7 @@ body.pf-night .pf-tag-knot {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #9a5526;
+  transition: color var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-night .pf-kicker,
@@ -438,6 +455,7 @@ body.pf-night .pf-kicker { color: #7b5aa6; }
   font-style: italic;
   color: var(--pf-orange);
   font-size: 1.05em;
+  transition: color var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-night .pf-tag h1 em,
@@ -449,6 +467,7 @@ body.pf-night .pf-tag h1 em { color: #8d4a86; }
   font-size: 12.5px;
   line-height: 1.45;
   color: #5b4632;
+  transition: color var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-night .pf-tag .pf-sub,
@@ -489,8 +508,8 @@ body.pf-night .pf-tag .pf-sub { color: #4a4468; }
   clip-path: polygon(2% 6%, 30% 0, 62% 4%, 99% 1%, 100% 52%, 98% 96%, 64% 100%, 34% 97%, 1% 100%, 0 48%);
   filter: drop-shadow(0 4px 5px var(--pf-shade));
   transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1),
-              background-color 1.2s ease,
-              color 1.2s ease;
+              background-color var(--pf-nd) var(--pf-nd-ease),
+              color var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-chip:hover { transform: translateY(-2px) rotate(-1deg); }
@@ -511,7 +530,7 @@ body.pf-night .pf-chip {
   border-radius: 12px;
   background: #d9c7a1;
   box-shadow: inset 0 2px 3px rgba(80, 50, 20, 0.3);
-  transition: background-color 0.9s ease;
+  transition: background-color var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-chip[aria-pressed="true"] .pf-track,
@@ -527,7 +546,9 @@ body.pf-night .pf-track {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  transition: transform 0.7s cubic-bezier(0.5, -0.3, 0.3, 1.35);
+  /* 只有这枚 20px 的滑块保留了回弹手感，它是开关本身，
+     和整片森林的换色节奏不冲突。 */
+  transition: transform var(--pf-nd) cubic-bezier(0.5, -0.3, 0.3, 1.35);
 }
 
 .pf-chip[aria-pressed="true"] .pf-knob,
@@ -541,7 +562,7 @@ body.pf-night .pf-knob {
   inset: 0;
   width: 20px;
   height: 20px;
-  transition: opacity 0.5s ease, transform 0.7s ease;
+  transition: opacity var(--pf-nd) var(--pf-nd-ease), transform var(--pf-nd) var(--pf-nd-ease);
 }
 
 .pf-knob .k-moon { opacity: 0; transform: rotate(-90deg); }
@@ -561,9 +582,14 @@ body.pf-night .pf-knob .k-moon {
 .pf-chip-label { font-style: italic; }
 .pf-chip svg.scissors { width: 18px; height: 18px; }
 
-/* 减少动画 */
+/* 减少动画：昼夜切换改成一次短促、线性的直接过渡，
+   不再有吊杆升降与逐层错开的观感。 */
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --pf-nd: 240ms;
+    --pf-nd-ease: linear;
+  }
   .pf-place > svg { animation: none; }
   .pf-hang .pf-swing, .pf-pins .tw { animation: none; }
-  .pf-hang { transition-duration: 0.6s; }
+  .pf-night .glint, body.pf-night .glint { animation: none; }
 }

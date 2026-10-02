@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc'
 
@@ -32,6 +32,13 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  // 只放行麦克风（语音输入要用 getUserMedia），其余一律拒绝。
+  // 系统层面还有一道：macOS 会按 Info.plist 里的 NSMicrophoneUsageDescription
+  // 弹窗询问，那条文案在 electron-builder.yml 的 mac.extendInfo 里。
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(permission === 'media')
+  })
+
   const win = createWindow()
   registerIpc(() => BrowserWindow.getAllWindows()[0] ?? win)
   app.on('activate', () => {
