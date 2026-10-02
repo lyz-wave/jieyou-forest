@@ -563,7 +563,16 @@ body.pf-night .pf-knob .k-moon {
 
 /* 减少动画 */
 @media (prefers-reduced-motion: reduce) {
-  .pf-place > svg { animation: none; }
-  .pf-hang .pf-swing, .pf-pins .tw { animation: none; }
+  /* 一刀切：这个背景里任何持续的装饰动画都停下。
+     原来只点了两个选择器，于是星星闪烁（pf-twinkle）与夜间微光（pf-glint）
+     照旧无限循环——减少动画下界面应当完全静止，不是"少动一点"。 */
+  .pf-stage,
+  .pf-stage *,
+  .pf-tag-wrap,
+  .pf-tag-wrap *,
+  .pf-controls,
+  .pf-controls * {
+    animation: none !important;
+  }
   .pf-hang { transition-duration: 0.6s; }
 }
