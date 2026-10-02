@@ -44,6 +44,8 @@ export default function App() {
         recutSignal={recutSignal}
       />
 
+      <div className="vignette" aria-hidden="true" />
+
       {/* 设置入口：纯图标、低对比度。刻意不藏起来——首次使用时它是唯一能配置模型的地方。 */}
       <div style={{ position: 'fixed', top: 14, right: 14, zIndex: 100 }}>
         <button

@@ -117,6 +117,28 @@ html, body {
   touch-action: manipulation;
 }
 
+/* 让四周的装饰退到背景里，中央内容浮出来。
+   纸艺剧场是九层剪纸堆叠，视觉重量集中在四角与边缘；视觉评审说
+   "装饰元素偏多、背景略显繁复"。压一层柔和的暗角比删掉任何一层都便宜，
+   而且完全可逆——它不改变任何人画的图，只改变注意力落在哪。
+   叠放顺序：纸艺舞台 z-index 0 < 暗角 1 < 内容 2。 */
+.vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    /* 左上便签与右上太阳是视觉重量最大的两处，单独再退让一层 */
+    radial-gradient(ellipse 40% 32% at 6% 5%, rgba(245, 240, 228, 0.62), transparent 72%),
+    radial-gradient(ellipse 38% 30% at 94% 6%, rgba(245, 240, 228, 0.55), transparent 72%),
+    radial-gradient(
+      ellipse 58% 54% at 50% 46%,
+      rgba(246, 242, 232, 0) 0%,
+      rgba(246, 242, 232, 0.3) 58%,
+      rgba(242, 236, 222, 0.72) 100%
+    );
+}
+
 .shell {
   max-width: 664px;
   width: 100%;
@@ -303,13 +325,16 @@ input[type="date"] {
   color: inherit;
   border: 0;
   border-radius: var(--r-lg);
-  background: var(--glass-input);
+  /* 它是首屏最主要的交互入口，必须从繁复的背景里立起来：
+     填充更实、边界更清楚，而不只是靠一层很淡的内描边。 */
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(18px) saturate(170%);
   -webkit-backdrop-filter: blur(18px) saturate(170%);
   box-shadow:
     inset 0 1px 0 var(--rim),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.45),
-    0 10px 26px -18px var(--shadow);
+    inset 0 0 0 1px rgba(122, 106, 84, 0.24),
+    0 2px 4px rgba(46, 42, 34, 0.06),
+    0 12px 30px -18px var(--shadow);
   transition: box-shadow var(--t-base) var(--spring), background var(--t-base) linear;
 }
 textarea {
