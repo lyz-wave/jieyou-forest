@@ -33,6 +33,8 @@ export default function VoiceInputButton({
   const [isListening, setIsListening] = useState(false)
   const [supported, setSupported] = useState(true)
   const [tip, setTip] = useState('')
+  // Electron 下 Web Speech 是死路（见 startListening 里的说明），界面要提前说清楚
+  const isElectron = typeof navigator !== 'undefined' && /Electron/i.test(navigator.userAgent)
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
 
   useEffect(() => {
@@ -62,9 +64,18 @@ export default function VoiceInputButton({
   const startListening = useCallback(() => {
     const SpeechRec =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRec) {
-      setTip('当前运行环境不支持语音识别（Electron 打包版通常不可用）')
-      setTimeout(() => setTip(''), 3000)
+
+    // Electron 里 Web Speech 永远不会成功：它依赖 Chrome 内置的云端识别服务，
+    // 而 Electron 构建里没有那个密钥。这是官方认定的平台限制（electron#46143），
+    // 开发模式与打包版都一样，换网络、换版本都无解。
+    // 与其让它跑一遍再吐一个英文错误码「识别提示: network」，不如一开始就说清楚。
+    if (isElectron || !SpeechRec) {
+      setTip(
+        SpeechRec
+          ? '桌面版用不了云端语音识别：Electron 没有 Chrome 的识别服务（官方平台限制）。可改用本地 Whisper。'
+          : '当前运行环境不支持语音识别。',
+      )
+      setTimeout(() => setTip(''), 6000)
       return
     }
 
@@ -116,7 +127,7 @@ export default function VoiceInputButton({
       setTimeout(() => setTip(''), 3000)
       setIsListening(false)
     }
-  }, [onTranscript])
+  }, [onTranscript, isElectron])
 
   const toggle = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -137,9 +148,17 @@ export default function VoiceInputButton({
       <button
         type="button"
         onClick={toggle}
-        disabled={disabled || !supported}
+        disabled={disabled}
         aria-label={isListening ? '停止语音输入' : title}
-        title={!supported ? '当前平台不支持语音识别' : isListening ? '点击停止语音输入' : title}
+        title={
+          !supported
+            ? '当前平台不支持语音识别'
+            : isElectron
+              ? '桌面版用不了云端语音识别（点一下看原因）'
+              : isListening
+                ? '点击停止语音输入'
+                : title
+        }
         className={`voice-btn ${isListening ? 'listening' : ''}`}
         style={{
           width: btnSize,
