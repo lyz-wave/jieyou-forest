@@ -15,6 +15,8 @@ export interface SessionController {
   banner: string | null
   /** 承接回应还在路上。用来禁用提交按钮、显示呼吸占位。 */
   awaiting: boolean
+  /** 三视角还在生成。用来给四张卡片显示呼吸占位。 */
+  reflecting: boolean
   receive: string
   cards: Partial<Record<ReflectionCardId, string>>
   analysis?: CognitiveAnalysis
@@ -55,6 +57,7 @@ export function useSession(): SessionController {
   const [notice, setNotice] = useState('')
   const [rings, setRings] = useState<RingRow[]>([])
   const [awaiting, setAwaiting] = useState(false)
+  const [reflecting, setReflecting] = useState(false)
 
   /** 当前会话 id。事件带的 sessionId 必须与它对上，迟到的旧会话数据不许进界面。 */
   const activeSessionRef = useRef('')
@@ -68,7 +71,11 @@ export function useSession(): SessionController {
       if (p.sessionId !== activeSessionRef.current) return
       setReceive((t) => t + p.delta)
     })
-    const offReflection = window.forest.onReflection((p) => setCards((c) => ({ ...c, [p.card]: p.delta })))
+    const offReflection = window.forest.onReflection((p) => {
+      // 与承接同一条规矩：按会话过滤，迟到的旧会话不许进界面
+      if (p.sessionId !== activeSessionRef.current) return
+      setCards((c) => ({ ...c, [p.card]: p.delta }))
+    })
 
     // 这两条通道主进程一直在发，而渲染层从来没有订阅过。
     // 关键在于：它们在**调用模型之前**就已经发出，所以可以拿来立刻切场景——
@@ -129,15 +136,30 @@ export function useSession(): SessionController {
   )
 
   const consent = useCallback(async () => {
-    const r = await window.forest.consent({ sessionId })
-    if (r.ok) {
-      if (r.analysis) setAnalysis(r.analysis)
-      setScene('reflect')
-    } else {
-      setReason(r.reason ?? 'invalid')
-      setScene('unfinished')
+    if (reflecting) return
+    // 点「继续」本身就是同意，没有任何东西要等——立刻切到思考页，
+    // 让四张卡片先以呼吸占位出现。
+    //
+    // 原来要等整段三视角生成完（最长 30 秒）才切场景，而主进程在那之前
+    // 就已经把四张卡片的推送发完了：没有场景接收它们，界面上只剩一个
+    // 还亮着的「继续」按钮。这与票 #23 修的「说完了」是同一个病。
+    setReflecting(true)
+    setCards({})
+    setAnalysis(undefined)
+    setScene('reflect')
+    try {
+      const r = await window.forest.consent({ sessionId })
+      if (r.ok) {
+        if (r.analysis) setAnalysis(r.analysis)
+      } else {
+        // 生成失败不兜底：退到「未完成」，不产出任何内容
+        setReason(r.reason ?? 'invalid')
+        setScene('unfinished')
+      }
+    } finally {
+      setReflecting(false)
     }
-  }, [sessionId])
+  }, [sessionId, reflecting])
 
   const adoptExperiment = useCallback((exp: MicroExperiment) => {
     setAdoptedExperiment(exp)
@@ -202,7 +224,7 @@ export function useSession(): SessionController {
   }, [])
 
   return {
-    scene, input, sessionId, caps, banner, awaiting, receive, cards, analysis, adoptedExperiment, resonance, reason, notice, rings,
+    scene, input, sessionId, caps, banner, awaiting, reflecting, receive, cards, analysis, adoptedExperiment, resonance, reason, notice, rings,
     setInput, go: setScene, submit, choose, consent, adoptExperiment, cancelReflect, correct,
     retryReceive, saveRing, openTree, removeRing, startOver,
   }

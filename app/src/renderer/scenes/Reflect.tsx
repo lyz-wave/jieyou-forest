@@ -90,6 +90,9 @@ export default function Reflect({ s }: { s: SessionController }) {
       )}
 
       {/* 第二层：苏格拉底反问 + 三视角与折返镜 */}
+      {s.reflecting && (
+        <p className="muted" style={{ margin: '0 0 14px', fontSize: 12 }}>正在一起看</p>
+      )}
       {PANELS.map(([key, defaultTitle, defaultSocratic]) => {
         const socratic = analysis?.socraticQuestions?.[key] || defaultSocratic
         return (
@@ -121,9 +124,21 @@ export default function Reflect({ s }: { s: SessionController }) {
                 <span>💬 深入推敲</span>
               </button>
             </div>
-            <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.6, color: 'var(--text)' }}>
-              {s.cards[key] || '……'}
-            </p>
+            {s.cards[key] ? (
+              <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.6, color: 'var(--text)' }}>
+                {s.cards[key]}
+              </p>
+            ) : s.reflecting ? (
+              /* 与承接那条路同一个占位：纯明暗起伏，无转圈、无百分比，
+                 减少动画下静止。它说的是"正在形成"，不是"正在处理"。 */
+              <div className="breath" aria-hidden="true" style={{ marginTop: 10 }}>
+                <span />
+                <span />
+                <span />
+              </div>
+            ) : (
+              <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.6, color: 'var(--text)' }}>……</p>
+            )}
           </div>
         )
       })}
