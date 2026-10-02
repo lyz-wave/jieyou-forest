@@ -304,9 +304,17 @@ export function createMobileForestApi(): ForestApi {
     },
 
     async clearAll(): Promise<EmptyResult> {
+      // 与桌面端对齐：年轮、复盘、模型配置与密钥一起清掉。
+      // 只清年轮而把 API Key 留在 localStorage 里，"清空所有数据"就是一句谎话。
       rings = []
+      reviews.length = 0
       saveRingsToStorage(rings)
-      return { empty: true }
+      persistReviews(reviews)
+      modelConfig = { baseUrl: '', model: '' }
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.removeItem(CONFIG_KEY)
+      } catch {}
+      return { empty: rings.length === 0 && reviews.length === 0 }
     },
 
     async demoReset(): Promise<EmptyResult> {

@@ -42,6 +42,8 @@ export interface SessionController {
   retryReceive: () => Promise<void>
   saveRing: (draft: RingDraft) => Promise<void>
   saveReview: (ringId: string, draft: ReviewDraft) => Promise<void>
+  /** 清空所有本地数据（含模型配置与密钥），然后回到首页。 */
+  clearAllData: () => Promise<void>
   openTree: () => Promise<void>
   removeRing: (id: string) => Promise<void>
   startOver: () => void
@@ -242,6 +244,14 @@ export function useSession(): SessionController {
     [openTree],
   )
 
+  const clearAllData = useCallback(async () => {
+    const r = await window.forest.clearAll()
+    // 清完要能校验。做不到就如实抛出去，不要假装成功。
+    if (!r.empty) throw new Error('清除之后仍能读到数据')
+    await refreshRings()
+    setScene('express')
+  }, [refreshRings])
+
   const startOver = useCallback(() => {
     setInput('')
     setReceive('')
@@ -257,7 +267,7 @@ export function useSession(): SessionController {
     scene, input, sessionId, caps, banner, awaiting, reflecting, receive, cards, analysis, adoptedExperiment, resonance, reason, notice, rings,
     reviews, due: dueRings(rings, reviews),
     setInput, go: setScene, submit, choose, consent, adoptExperiment, cancelReflect, correct,
-    retryReceive, saveRing, saveReview, openTree, removeRing, startOver,
+    retryReceive, saveRing, saveReview, clearAllData, openTree, removeRing, startOver,
   }
 }
 

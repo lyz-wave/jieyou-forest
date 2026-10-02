@@ -44,6 +44,62 @@ export default function App() {
         recutSignal={recutSignal}
       />
 
+      {/* 「我的树」的常驻入口。
+          在此之前，全应用只有两个地方能进树：承接页里那张**只在有共鸣时才出现**的
+          年轮共鸣卡片，以及刚保存完年轮那一刻的「看看我的树」。
+          也就是说：保存一圈年轮 → 看到树 → 点「再说一件」回首页 → **从此再也回不去了**。
+          这个产品的全部积累在结构上不可达。
+          角标上的数字本身就是积累感——没有年轮时不显示角标，而不是显示 0。 */}
+      <div style={{ position: 'fixed', top: 14, right: 52, zIndex: 100 }}>
+        <button
+          type="button"
+          onClick={s.openTree}
+          title={s.rings.length > 0 ? `我的树（${s.rings.length} 圈年轮）` : '我的树'}
+          aria-label={s.rings.length > 0 ? `打开我的树，共 ${s.rings.length} 圈年轮` : '打开我的树'}
+          style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 30,
+            height: 30,
+            padding: 0,
+            fontSize: 13,
+            lineHeight: 1,
+            borderRadius: 999,
+            cursor: 'pointer',
+            color: 'rgba(90, 80, 66, 0.62)',
+            background: 'rgba(255, 252, 245, 0.42)',
+            border: '1px solid rgba(210, 195, 175, 0.38)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          🌳
+          {s.rings.length > 0 && (
+            <span
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                top: -5,
+                right: -5,
+                minWidth: 15,
+                height: 15,
+                padding: '0 3px',
+                borderRadius: 999,
+                background: 'rgba(74, 141, 92, 0.92)',
+                color: '#fff',
+                fontSize: 10,
+                fontWeight: 700,
+                lineHeight: '15px',
+                textAlign: 'center',
+              }}
+            >
+              {s.rings.length}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* 设置入口：纯图标、低对比度。刻意不藏起来——首次使用时它是唯一能配置模型的地方。 */}
       <div style={{ position: 'fixed', top: 14, right: 14, zIndex: 100 }}>
         <button
@@ -107,6 +163,7 @@ export default function App() {
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         onRecut={() => setRecutSignal((n) => n + 1)}
+        onClearAll={s.clearAllData}
       />
 
       <div className="shell">

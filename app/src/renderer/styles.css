@@ -139,8 +139,12 @@ html, body {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: max(40px, env(safe-area-inset-top, 24px)) max(20px, env(safe-area-inset-right, 16px)) max(52px, env(safe-area-inset-bottom, 24px)) max(20px, env(safe-area-inset-left, 16px));
+  /* 内容靠上，而不是垂直居中。
+     实测：首屏内容总高 280px、窗口 820px，居中会上下各留约 270px 空白，
+     读起来是"一小坨飘在正中间"。靠上之后空白集中在一处，观感是"这里还有空间"，
+     而不是"内容没放好"。内容超高时（树、三视角）这个属性本来就不起作用。 */
+  justify-content: flex-start;
+  padding: max(9vh, 56px, env(safe-area-inset-top, 24px)) max(20px, env(safe-area-inset-right, 16px)) max(52px, env(safe-area-inset-bottom, 24px)) max(20px, env(safe-area-inset-left, 16px));
   position: relative;
   z-index: 2;
   pointer-events: none;

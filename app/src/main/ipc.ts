@@ -211,6 +211,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(CH.invoke.clearAll, () => {
     const c = must()
     repo.clearAll(c.db)
+    // 内存里那个 client 还攥着刚才的密钥。不清掉的话，界面显示"已清空"
+    // 而应用实际上还能拿旧凭据发请求——那就成了"删了但没删干净"。
+    c.model = createModelClient(loadConfig())
     return { empty: repo.isDatabaseEmpty(c.db) }
   })
 

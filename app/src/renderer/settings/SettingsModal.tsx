@@ -21,6 +21,8 @@ interface SettingsModalProps {
   onClose: () => void
   /** 重剪。昼夜开关不在这里——见 App.tsx 里右下角那颗按钮的注释。 */
   onRecut: () => void
+  /** 清空所有本地数据（含模型配置与密钥）。失败要抛出来，界面会如实显示。 */
+  onClearAll: () => Promise<void>
 }
 
 interface ProviderPreset {
@@ -90,7 +92,7 @@ const PRESETS: ProviderPreset[] = [
   },
 ]
 
-export default function SettingsModal({ isOpen, onClose, onRecut }: SettingsModalProps) {
+export default function SettingsModal({ isOpen, onClose, onRecut, onClearAll }: SettingsModalProps) {
   const [config, setConfig] = useState<ModelConfigDto>({
     baseUrl: 'https://api.deepseek.com/v1',
     model: 'deepseek-chat',
@@ -101,6 +103,27 @@ export default function SettingsModal({ isOpen, onClose, onRecut }: SettingsModa
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<TestModelResult | null>(null)
   const [savedNotice, setSavedNotice] = useState(false)
+  const [clearing, setClearing] = useState(false)
+  const [confirmText, setConfirmText] = useState('')
+  const [clearingBusy, setClearingBusy] = useState(false)
+  const [clearError, setClearError] = useState('')
+
+  const doClear = async () => {
+    if (confirmText.trim() !== '清空' || clearingBusy) return
+    setClearingBusy(true)
+    setClearError('')
+    try {
+      await onClearAll()
+      setClearing(false)
+      setConfirmText('')
+      // 清空之后模型设置也不存在了，弹窗里那一堆配置已经没有意义
+      onClose()
+    } catch {
+      setClearError('没能清空，请再试一次。')
+    } finally {
+      setClearingBusy(false)
+    }
+  }
   /** 从端点拉回来的可用模型 id。空表示还没拉或拉失败。 */
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
@@ -556,6 +579,81 @@ export default function SettingsModal({ isOpen, onClose, onRecut }: SettingsModa
           <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--muted)' }}>
             重新生成背景的森林剪影。昼夜切换在右下角。
           </p>
+        </div>
+
+        {/* 数据。契约与主进程早就实现了 clearAll，渲染层从来没调用过——
+            一个把隐私当作立场的产品，没有"删掉我的一切"的入口是说不过去的。 */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(180, 160, 130, 0.25)' }}>
+          <label className="field" style={{ marginBottom: 8, display: 'block', fontSize: 12, fontWeight: 600 }}>
+            数据
+          </label>
+          <p style={{ margin: '0 0 10px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.7 }}>
+            清空会删掉：所有年轮与复盘、会话与事件记录、以及**模型设置与 API Key**。
+            删掉之后无法恢复，也不会同步到别处——数据只在这台电脑上。
+          </p>
+
+          {!clearing ? (
+            <button
+              type="button"
+              className="chip"
+              onClick={() => setClearing(true)}
+              style={{ fontSize: 12, padding: '5px 11px', color: '#9c4a3c', borderColor: 'rgba(156, 74, 60, 0.4)' }}
+            >
+              清空所有数据
+            </button>
+          ) : (
+            <div>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="输入「清空」两个字以确认"
+                aria-label="输入清空两个字以确认"
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(156, 74, 60, 0.45)',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  fontSize: 13,
+                }}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="chip"
+                  disabled={confirmText.trim() !== '清空' || clearingBusy}
+                  onClick={doClear}
+                  style={{
+                    fontSize: 12,
+                    padding: '5px 11px',
+                    color: '#9c4a3c',
+                    borderColor: 'rgba(156, 74, 60, 0.4)',
+                    opacity: confirmText.trim() !== '清空' ? 0.5 : 1,
+                    cursor: confirmText.trim() !== '清空' ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {clearingBusy ? '正在清空…' : '确认清空，无法撤销'}
+                </button>
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={() => {
+                    setClearing(false)
+                    setConfirmText('')
+                    setClearError('')
+                  }}
+                  disabled={clearingBusy}
+                  style={{ fontSize: 12, padding: '5px 11px' }}
+                >
+                  取消
+                </button>
+              </div>
+              {clearError && (
+                <p style={{ margin: '8px 0 0', fontSize: 11, color: '#9c4a3c' }}>{clearError}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 操作栏 */}

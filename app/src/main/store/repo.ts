@@ -149,7 +149,10 @@ export function recordEvent(
 }
 
 export function clearAll(db: Database.Database): void {
-  for (const t of ['review', 'ring', 'reflection', 'session', 'interaction_event']) {
+  // app_config 也在内：模型配置和 API Key 存在那里。
+  // 一个把隐私当作立场的产品，不该在"清空所有数据"之后把用户的密钥留在磁盘上——
+  // 那会让这个按钮的标签变成一句谎话。
+  for (const t of ['review', 'ring', 'reflection', 'session', 'interaction_event', 'app_config']) {
     db.prepare(`DELETE FROM ${t}`).run()
   }
   db.exec('VACUUM')
@@ -157,7 +160,7 @@ export function clearAll(db: Database.Database): void {
 
 /** 清空之后要能校验（ADR-0002 第二条配套）。 */
 export function isDatabaseEmpty(db: Database.Database): boolean {
-  const tables = ['session', 'reflection', 'ring', 'review', 'interaction_event']
+  const tables = ['session', 'reflection', 'ring', 'review', 'interaction_event', 'app_config']
   return tables.every(
     (t) => (db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get() as { n: number }).n === 0,
   )
