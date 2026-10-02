@@ -105,7 +105,7 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
     discuss: async (p) => {
       setTimeout(() => {
         discussionListeners.forEach((cb) =>
-          cb({ sessionId: p.sessionId, perspective: p.perspective, delta: '这是苏格拉底反问回应', done: true }),
+          cb({ sessionId: p.sessionId, thread: p.thread, delta: '这是苏格拉底反问回应', done: true }),
         )
       }, 10)
       return { ok: true, reply: '这是苏格拉底反问回应' }

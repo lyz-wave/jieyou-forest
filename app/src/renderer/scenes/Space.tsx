@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import type { SessionController } from '../useSession'
+import DiscussDrawer from './DiscussDrawer'
 
 /** 承接之后的当下空间。两条路径在这里同时出现，分流发生在承接之后。 */
 export default function Space({ s }: { s: SessionController }) {
+  const [receivingOpen, setReceivingOpen] = useState(false)
+
   return (
     <>
       {s.banner && <div className="banner">{s.banner}</div>}
@@ -88,6 +92,16 @@ export default function Space({ s }: { s: SessionController }) {
         )}
       </div>
 
+      {/* 看完承接之后，第一个真实需求往往不是"下一步去哪"，而是
+          「我还有一点没说」或「你理解错了」。这里给一个**只承接、不检验**的对话入口：
+          它只回应与澄清，不提反问、不检验前提，因此不构成认知挑战，也就不需要同意记录。
+          而「陪我想一想」那条路仍然要过同意门槛——门禁在主进程，界面绕不过去。 */}
+      {s.receive && !s.awaiting && (
+        <div className="row" style={{ marginBottom: 10 }}>
+          <button className="ghost" onClick={() => setReceivingOpen(true)}>还想说点什么</button>
+        </div>
+      )}
+
       <div className="row">
         {s.caps.canRest && <button className="primary" onClick={() => s.choose('rest')}>先歇一会儿</button>}
         {s.caps.canReflect ? (
@@ -103,6 +117,23 @@ export default function Space({ s }: { s: SessionController }) {
       {s.banner && (
         <button className="ghost" onClick={s.retryReceive} disabled={s.awaiting}>重试这次回应</button>
       )}
+
+      <DiscussDrawer
+        isOpen={receivingOpen}
+        onClose={() => setReceivingOpen(false)}
+        thread="receiving"
+        threadTitle="接着说"
+        initialQuestion=""
+        sessionId={s.sessionId}
+        mode="receiving"
+        onSaveInsight={(insightText) =>
+          s.adoptExperiment({
+            action: insightText,
+            observableCriterion: '把想说的说完了',
+            estimatedMinutes: 5,
+          })
+        }
+      />
     </>
   )
 }

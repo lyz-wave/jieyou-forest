@@ -149,12 +149,27 @@ export interface DiscussMessage {
   content: string
 }
 
+/**
+ * 推敲的两种模式。
+ *
+ * challenge：认知挑战——会检验用户的前提假设。**必须有同意记录**（PRD 第一条不变量）。
+ * receiving：只承接与澄清——不提问反问、不检验前提，在定义上不构成认知挑战，因此不需要同意。
+ */
+export type DiscussMode = 'challenge' | 'receiving'
+
+/** 会话线程标识。认知挑战用视角 id；承接模式用 'receiving'。 */
+export type DiscussThread = ReflectionCardId | 'receiving'
+
 export interface DiscussInput {
   sessionId: string
-  perspective: ReflectionCardId
-  perspectiveTitle: string
+  /** 线程键。渲染层按它过滤流式分片，所以它必须唯一标识一条对话。 */
+  thread: DiscussThread
+  /** 线程的显示名，用于界面标题与保存顿悟时的前缀。 */
+  threadTitle: string
   userQuery: string
   history?: DiscussMessage[]
+  /** 省略时按 'challenge' 处理——**安全默认**：少写一个字段不会绕过同意门槛。 */
+  mode?: DiscussMode
 }
 
 export interface DiscussResult {
@@ -165,7 +180,7 @@ export interface DiscussResult {
 
 export interface DiscussionChunk {
   sessionId: string
-  perspective: ReflectionCardId
+  thread: DiscussThread
   delta: string
   done: boolean
 }

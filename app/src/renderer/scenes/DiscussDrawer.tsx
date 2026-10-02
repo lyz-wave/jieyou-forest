@@ -1,27 +1,34 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { ReflectionCardId } from '../../shared/types'
-import type { DiscussMessage } from '../../shared/ipc'
+import type { DiscussMessage, DiscussMode, DiscussThread } from '../../shared/ipc'
 import VoiceInputButton from '../voice/VoiceInputButton'
 
 interface DiscussDrawerProps {
   isOpen: boolean
   onClose: () => void
-  perspective: ReflectionCardId
-  perspectiveTitle: string
+  thread: DiscussThread
+  threadTitle: string
   initialQuestion: string
   sessionId: string
+  /**
+   * challenge（默认）：认知挑战，主进程要求同意记录。
+   * receiving：只承接与澄清，不检验前提，不需要同意。
+   * 这里只是把模式传给主进程；**门禁在主进程**，界面改不了它的判定。
+   */
+  mode?: DiscussMode
   onSaveInsight: (insightText: string) => void
 }
 
 export default function DiscussDrawer({
   isOpen,
   onClose,
-  perspective,
-  perspectiveTitle,
+  thread,
+  threadTitle,
   initialQuestion,
   sessionId,
+  mode = 'challenge',
   onSaveInsight,
 }: DiscussDrawerProps) {
+  const isReceiving = mode === 'receiving'
   const [messages, setMessages] = useState<DiscussMessage[]>([])
   const [inputText, setInputText] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
@@ -34,20 +41,24 @@ export default function DiscussDrawer({
       setMessages([
         {
           role: 'assistant',
-          content: initialQuestion || `我是【${perspectiveTitle}】视角。让我们一起慢下来，看看这里藏着什么。`,
+          content:
+            initialQuestion ||
+            (isReceiving
+              ? '我们接着刚才的说。你想补充什么？'
+              : `我是【${threadTitle}】视角。让我们一起慢下来，看看这里藏着什么。`),
         },
       ])
       setInputText('')
       setIsStreaming(false)
       setStreamingContent('')
     }
-  }, [isOpen, perspective, perspectiveTitle, initialQuestion])
+  }, [isOpen, thread, threadTitle, initialQuestion, isReceiving])
 
   // 监听流式返回
   useEffect(() => {
     if (!isOpen) return
     const unsubscribe = window.forest.onDiscussionDelta((chunk) => {
-      if (chunk.perspective !== perspective) return
+      if (chunk.thread !== thread) return
       if (!chunk.done) {
         setStreamingContent((prev) => prev + chunk.delta)
       } else {
@@ -69,7 +80,7 @@ export default function DiscussDrawer({
       }
     })
     return () => unsubscribe()
-  }, [isOpen, perspective])
+  }, [isOpen, thread])
 
   // 自动滚动至最新消息
   useEffect(() => {
@@ -90,10 +101,11 @@ export default function DiscussDrawer({
     try {
       const res = await window.forest.discuss({
         sessionId,
-        perspective,
-        perspectiveTitle,
+        thread,
+        threadTitle,
         userQuery,
         history: messages,
+        mode,
       })
       if (!res.ok) {
         setMessages((prev) => [
@@ -119,7 +131,7 @@ export default function DiscussDrawer({
       ])
       setIsStreaming(false)
     }
-  }, [inputText, isStreaming, messages, sessionId, perspective, perspectiveTitle])
+  }, [inputText, isStreaming, messages, sessionId, thread, threadTitle])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -139,8 +151,8 @@ export default function DiscussDrawer({
     const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
     const insight =
       lastUserMsg?.content
-        ? `【${perspectiveTitle}推敲】${lastUserMsg.content}`
-        : lastAssistantMsg?.content || `来自【${perspectiveTitle}】的启发思考`
+        ? `【${threadTitle}推敲】${lastUserMsg.content}`
+        : lastAssistantMsg?.content || `来自【${threadTitle}】的启发思考`
     onSaveInsight(insight)
     onClose()
   }
@@ -194,14 +206,16 @@ export default function DiscussDrawer({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 18 }}>
-                {perspective === 'guardian' ? '🌲' : perspective === 'explorer' ? '🧭' : perspective === 'outsider' ? '🕊️' : '🪞'}
+                thread === 'receiving' ? '💬' : thread === 'guardian' ? '🌲' : thread === 'explorer' ? '🧭' : thread === 'outsider' ? '🕊️' : '🪞'
               </span>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
-                {perspectiveTitle} · 深度推敲
+                {isReceiving ? '接着说' : threadTitle + ' · 深度推敲'}
               </h3>
             </div>
             <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--muted)' }}>
-              苏格拉底式反思 · 退出即焚（ADR-0002 纯内存驻留）
+              {isReceiving
+                ? '只回应，不检验你的想法 · 退出即焚（ADR-0002 纯内存驻留）'
+                : '苏格拉底式反思 · 退出即焚（ADR-0002 纯内存驻留）'}
             </p>
           </div>
           <button

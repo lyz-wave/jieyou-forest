@@ -381,12 +381,12 @@ export function createMobileForestApi(): ForestApi {
         for await (const chunk of client.discuss(p, ac.signal)) {
           full += chunk
           discussionListeners.forEach((cb) =>
-            cb({ sessionId: p.sessionId, perspective: p.perspective, delta: chunk, done: false }),
+            cb({ sessionId: p.sessionId, thread: p.thread, delta: chunk, done: false }),
           )
         }
         clearTimeout(timer)
         discussionListeners.forEach((cb) =>
-          cb({ sessionId: p.sessionId, perspective: p.perspective, delta: '', done: true }),
+          cb({ sessionId: p.sessionId, thread: p.thread, delta: '', done: true }),
         )
         return { ok: true, reply: full }
       } catch (err) {

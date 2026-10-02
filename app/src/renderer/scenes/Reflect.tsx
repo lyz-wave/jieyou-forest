@@ -13,13 +13,13 @@ const PANELS: Array<[ReflectionCardId, string, string]> = [
 export default function Reflect({ s }: { s: SessionController }) {
   const analysis = s.analysis
   const [activeDiscuss, setActiveDiscuss] = useState<{
-    perspective: ReflectionCardId
+    thread: ReflectionCardId
     title: string
     socratic: string
   } | null>(null)
 
-  const handleOpenDiscuss = (perspective: ReflectionCardId, title: string, socratic: string) => {
-    setActiveDiscuss({ perspective, title, socratic })
+  const handleOpenDiscuss = (thread: ReflectionCardId, title: string, socratic: string) => {
+    setActiveDiscuss({ thread, title, socratic })
   }
 
   const handleSaveInsight = (insightText: string) => {
@@ -194,8 +194,8 @@ export default function Reflect({ s }: { s: SessionController }) {
         <DiscussDrawer
           isOpen={Boolean(activeDiscuss)}
           onClose={() => setActiveDiscuss(null)}
-          perspective={activeDiscuss.perspective}
-          perspectiveTitle={activeDiscuss.title}
+          thread={activeDiscuss.thread}
+          threadTitle={activeDiscuss.title}
           initialQuestion={activeDiscuss.socratic}
           sessionId={s.sessionId}
           onSaveInsight={handleSaveInsight}

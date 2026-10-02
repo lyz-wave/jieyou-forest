@@ -318,9 +318,17 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(CH.invoke.discuss, async (_e, payload: DiscussInput) => {
     const c = must()
     const s = c.memory.get(payload.sessionId)
-    // 与三视角同一道门禁：没有同意记录，就没有认知挑战。
-    // 这里原本直接放行，等于给「经过你同意才提问」开了一个后门。
-    if (!s || !canEnterReflection(s)) {
+
+    // 门禁**按模式判定**，不按通道：
+    //   · challenge（认知挑战，会检验前提）——必须有同意记录。
+    //   · receiving（只承接与澄清）——在定义上不构成认知挑战，因此不需要。
+    // mode 省略时按 challenge 处理，这是安全默认：少写一个字段不会绕过门槛。
+    //
+    // ⚠️ 这**不是**放宽门槛。把整条 discuss 通道免同意才是放宽——那等于给
+    //    「经过你同意才提问」开后门。承接模式免同意的唯一理由是它不问反问，
+    //    而这一点由 buildDiscussMessages 里那段提示词保证，两处必须一起改。
+    const mode = payload.mode ?? 'challenge'
+    if (mode === 'challenge' && (!s || !canEnterReflection(s))) {
       return { ok: false, error: '这一轮推敲没有有效的同意记录，不能继续。请回到分流重新选择。' }
     }
     if (!c.model.available) {
@@ -338,7 +346,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
         fullReply += chunk
         send(CH.send.discussionDelta, {
           sessionId: payload.sessionId,
-          perspective: payload.perspective,
+          thread: payload.thread,
           delta: chunk,
           done: false,
         })
@@ -346,7 +354,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       clearTimeout(timer)
       send(CH.send.discussionDelta, {
         sessionId: payload.sessionId,
-        perspective: payload.perspective,
+        thread: payload.thread,
         delta: '',
         done: true,
       })
