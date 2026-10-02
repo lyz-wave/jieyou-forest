@@ -1,6 +1,21 @@
 import { useState, useEffect } from 'react'
 import type { ModelConfigDto, TestModelResult } from '../../shared/ipc'
 
+/**
+ * 预加载脚本与渲染层的版本可能不同步：
+ * electron-vite dev 下改 preload 需要重开窗口才会生效，而渲染层 HMR 是立刻生效的，
+ * 于是会出现"界面上有新按钮、桥上没有新方法"，报一个裸的 TypeError。
+ * 与其抛错，不如把原因说清楚。
+ */
+function bridgeProblem(method: string): string | null {
+  const api = window.forest as unknown as Record<string, unknown> | undefined
+  if (!api) return '应用桥未就绪，请重启应用。'
+  if (typeof api[method] !== 'function') {
+    return '当前运行的桥接脚本是旧版本（缺少 ' + method + '）。请重启应用，或在窗口里按 Cmd+R 重新加载后再试。'
+  }
+  return null
+}
+
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
@@ -111,6 +126,11 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   }
 
   const handleTest = async () => {
+    const problem = bridgeProblem('testModelConfig')
+    if (problem) {
+      setTestResult({ ok: false, error: problem })
+      return
+    }
     setTesting(true)
     setTestResult(null)
     try {
@@ -127,6 +147,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   }
 
   const handleFetchModels = async () => {
+    const problem = bridgeProblem('listModels')
+    if (problem) {
+      setModels([])
+      setModelsError(problem)
+      return
+    }
     setLoadingModels(true)
     setModelsError(null)
     try {

@@ -538,4 +538,18 @@ describe('四幕界面逐幕走查', () => {
     const noteInput = screen.getByLabelText('你自己的一句话') as HTMLInputElement
     expect(noteInput.value).toContain('我还是有点忐忑')
   })
+  it('桥接脚本是旧版本时，「获取模型列表」给出可读提示而不是裸 TypeError', async () => {
+    const { api } = boot()
+    // 复现 pnpm dev 下的真实情况：改 preload 不会热更新，渲染层 HMR 却立刻生效，
+    // 于是界面上有新按钮、桥上却没有新方法。
+    delete (api as unknown as Record<string, unknown>).listModels
+
+    fireEvent.click(screen.getByLabelText('打开大模型设置'))
+    await waitFor(() => expect(screen.getByText('获取模型列表')).toBeTruthy())
+    fireEvent.click(screen.getByText('获取模型列表'))
+
+    await waitFor(() => expect(screen.getByText(/获取失败/)).toBeTruthy())
+    expect(document.body.textContent).toContain('桥接脚本是旧版本')
+    expect(document.body.textContent).toContain('Cmd+R')
+  })
 })
