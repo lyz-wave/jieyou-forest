@@ -1,5 +1,6 @@
 import type {
   BannerResult,
+  CognitiveAnalysis,
   ConsentResult,
   CorrectResult,
   DeleteResult,
@@ -23,6 +24,13 @@ import type {
 import type { ReviewDraft, RingRow } from '../shared/types'
 import { capabilitiesFor } from '../shared/capabilities'
 import { findResonantRing } from '../shared/resonance'
+import rules from '../shared/gate/rules.json'
+import { applyCorrection, evaluateGate, type GateResult, type RulesFile } from '../shared/gate/gate'
+import { createModelClient } from '../shared/model/client'
+import { runReceive } from '../shared/orchestrate/receive'
+import { runReflection } from '../shared/orchestrate/reflection'
+
+const RULES = rules as RulesFile
 
 const STORAGE_KEY = 'jieyou_rings_v1'
 const CONFIG_KEY = 'jieyou_model_config_v1'
@@ -67,9 +75,22 @@ function saveConfigToStorage(cfg: ModelConfigDto): void {
   } catch {}
 }
 
+function clientFromConfig(cfg: ModelConfigDto) {
+  return createModelClient({
+    apiKey: cfg.apiKey?.trim() || undefined,
+    baseUrl: cfg.baseUrl,
+    model: cfg.model,
+    receiveTimeoutMs: cfg.receiveTimeoutMs ?? 45_000,
+    reflectTimeoutMs: cfg.reflectTimeoutMs ?? 30_000,
+  })
+}
+
 /**
- * 移动端/无 Electron 环境的纯本地适配器。
- * 允许在 iOS WKWebView / Capacitor / 独立浏览器中直接完整体验全部业务流程与年轮持久化。
+ * 移动端 / 无 Electron 环境的适配器（Capacitor / iOS WKWebView / 独立浏览器）。
+ *
+ * 它与主进程共用 shared/ 下的同一套东西：安全闸门、承接与三视角的编排、
+ * 模型客户端、兜底稿。契约的形状由 shared/ipc.ts 保证，行为由这些共享模块保证——
+ * 两边不会再各写一份。
  */
 export function createMobileForestApi(): ForestApi {
   const receiveListeners = new Set<(p: ReceiveChunk) => void>()
@@ -82,75 +103,117 @@ export function createMobileForestApi(): ForestApi {
   let rings: RingRow[] = loadSavedRings()
   let modelConfig: ModelConfigDto = loadSavedConfig()
   let currentInput = ''
+  /** 当前会话的安全判定。L1/L2/L3 由真实的闸门给出，不再写死。 */
+  let currentGate: GateResult | null = null
+  /** 同意记录。与桌面端同一条不变量：没有它就没有认知挑战。 */
+  let currentConsentAt: string | undefined
+
+  const caps = (): ReturnType<typeof capabilitiesFor> =>
+    capabilitiesFor(currentGate?.level ?? 'L3')
 
   return {
     async submit(p: SubmitInput): Promise<SubmitResult> {
       const sessionId = 's_' + Date.now().toString(36)
       currentInput = p.input
-      const level = 'L3'
-      const caps = capabilitiesFor(level)
+      currentConsentAt = undefined
 
-      verdictListeners.forEach((cb) => cb({ sessionId, level }))
+      // 与桌面端共用同一道闸门。
+      // 这里原本写死 level = 'L3'——也就是说 iOS 上根本不做任何安全判定，
+      // 用户写下明确危险表达，照样会收到「先慢慢深呼吸」的舒缓回应。
+      const gate = evaluateGate({ text: p.input }, RULES)
+      currentGate = gate
+
+      verdictListeners.forEach((cb) => cb({ sessionId, level: gate.level }))
       stateListeners.forEach((cb) => cb({ sessionId, status: 'receiving' }))
 
-      setTimeout(() => {
-        const reply = '被这样对待，确实可能让人难受。先慢慢深呼吸，这里没有评判，只有微风与落叶。'
-        receiveListeners.forEach((cb) => cb({ sessionId, delta: reply, done: true }))
-        stateListeners.forEach((cb) => cb({ sessionId, status: 'choosing' }))
-      }, 350)
+      // L1 不生树、不出休息卡、不思考，也不把这段话发去调模型
+      if (gate.level === 'L1') {
+        return { sessionId, capabilities: capabilitiesFor(gate.level), banner: null }
+      }
 
-      const resonance = findResonantRing(p.input, rings)
-      return { sessionId, capabilities: caps, banner: null, resonance }
+      const outcome = await runReceive({
+        model: clientFromConfig(modelConfig),
+        input: p.input,
+        timeoutMs: modelConfig.receiveTimeoutMs ?? 45_000,
+        emit: (delta, done) => receiveListeners.forEach((cb) => cb({ sessionId, delta, done })),
+      })
+      stateListeners.forEach((cb) => cb({ sessionId, status: 'choosing' }))
+
+      // 承接失败时走的是带标识的内置示例稿，界面上会同时显示横幅——
+      // 不再是那句对谁都一样的「被这样对待，确实可能让人难受」。
+      return {
+        sessionId,
+        capabilities: capabilitiesFor(gate.level),
+        banner: outcome.banner ?? null,
+        resonance: findResonantRing(p.input, rings),
+      }
     },
 
-    async retryReceive(): Promise<BannerResult> {
-      return { banner: '这是内置的轻柔陪伴提示，山林一直在倾听你的心声。' }
+    async retryReceive({ sessionId }): Promise<BannerResult> {
+      const outcome = await runReceive({
+        model: clientFromConfig(modelConfig),
+        input: currentInput,
+        timeoutMs: modelConfig.receiveTimeoutMs ?? 45_000,
+        emit: (delta, done) => receiveListeners.forEach((cb) => cb({ sessionId, delta, done })),
+      })
+      return { banner: outcome.banner ?? null }
     },
 
     async correct(): Promise<CorrectResult> {
-      const level = 'L2'
-      return { level, capabilities: { canRest: true, canReflect: false, canShowCrisis: false } }
+      // 更正只恢复休息路径，永不解锁思考——与桌面端同一套语义。
+      currentGate = applyCorrection(currentGate ?? evaluateGate({ text: '' }, RULES))
+      currentConsentAt = undefined
+      return { level: currentGate.level, capabilities: capabilitiesFor(currentGate.level) }
     },
 
     async choosePath({ sessionId, path }): Promise<StatusResult> {
+      const c = caps()
+      if (path === 'reflect' && !c.canReflect) {
+        throw new Error('当前状态不提供思考路径')
+      }
+      if (!c.canRest) {
+        throw new Error('当前状态不提供休息路径')
+      }
       const status = path === 'rest' ? 'resting' : 'reflecting'
       stateListeners.forEach((cb) => cb({ sessionId, status }))
       return { status }
     },
 
     async consent({ sessionId }): Promise<ConsentResult> {
-      setTimeout(() => {
-        reflectionListeners.forEach((cb) =>
-          cb({ sessionId, card: 'guardian', delta: '守护者视角：你已经在竭尽全力应对眼前的挑战，允许自己停下来片刻。', done: true }),
-        )
-        reflectionListeners.forEach((cb) =>
-          cb({ sessionId, card: 'explorer', delta: '探索者视角：如果这件事是一块路标，它最想提醒你珍惜什么？', done: true }),
-        )
-        reflectionListeners.forEach((cb) =>
-          cb({ sessionId, card: 'outsider', delta: '旁观者视角：一年后的自己再回头看现在的纠结，可能会微笑并感谢现在的勇敢。', done: true }),
-        )
-        reflectionListeners.forEach((cb) =>
-          cb({ sessionId, card: 'mirror', delta: '重构之镜：有没有可能，这并不是你的失败，而是一个重新定义边界的契机？', done: true }),
-        )
-      }, 350)
-      return {
-        ok: true,
-        analysis: {
-          objectiveFact: currentInput || '今天收到了一条令自己受挫的反馈',
-          subjectiveAssumption: '他们全盘否定我，我彻底搞砸了',
-          distortionBadge: '灾难化',
-          socraticQuestions: {
-            guardian: '守护者反问：你最想守护的核心边界和个人底线是什么？',
-            explorer: '探索者反问：如果把反对意见当作路标，这里藏着什么新可能？',
-            outsider: '局外人反问：一年后的你回看今天，会怎么看待这个小插曲？',
-          },
-          microExperiment: {
-            action: '明天只找关键人核实第一个修改点',
-            observableCriterion: '得到明确边界结论并记录在笔记中',
-            estimatedMinutes: 5,
-          },
-        },
+      // 同意门槛：没有它就不产生任何认知挑战
+      if (!caps().canReflect) {
+        return { ok: false, reason: 'no_consent' }
       }
+      currentConsentAt = new Date().toISOString()
+
+      const outcome = await runReflection({
+        model: clientFromConfig(modelConfig),
+        input: currentInput,
+        consentAt: currentConsentAt,
+        timeoutMs: modelConfig.reflectTimeoutMs ?? 30_000,
+      })
+
+      // 思考层不做内容兜底：拿不到就是未完成，界面上如实显示。
+      // 这里原本返回三段硬编码的「视角」和一份伪造分析，
+      // 其中还替用户编造了没说过的话（「他们全盘否定我，我彻底搞砸了」）。
+      if (!outcome.ok) return { ok: false, reason: outcome.reason }
+
+      const emitCard = (card: ReflectionChunk['card'], text: string): void =>
+        reflectionListeners.forEach((cb) => cb({ sessionId, card, delta: text, done: true }))
+      emitCard('guardian', outcome.views.guardian)
+      emitCard('explorer', outcome.views.explorer)
+      emitCard('outsider', outcome.views.outsider)
+      emitCard('mirror', outcome.reframedQuestion ?? '')
+
+      const analysis: CognitiveAnalysis = {
+        quotedInput: (outcome.quotedInput ?? []).filter((q) => typeof q === 'string' && q.trim().length > 0),
+        assumptions: outcome.assumptions ?? [],
+        reframedQuestion: outcome.reframedQuestion ?? '',
+        socraticQuestions: outcome.socraticQuestions,
+        microExperiment: outcome.microExperiment,
+        promptVersion: outcome.promptVersion,
+      }
+      return { ok: true, analysis }
     },
 
     async cancelReflect({ sessionId }): Promise<StatusResult> {
@@ -236,7 +299,7 @@ export function createMobileForestApi(): ForestApi {
       const start = Date.now()
       try {
         const controller = new AbortController()
-        const timer = setTimeout(() => controller.abort(), 12000)
+        const timer = setTimeout(() => controller.abort(), 12_000)
         const res = await fetch(url, {
           method: 'POST',
           headers: {
@@ -252,87 +315,42 @@ export function createMobileForestApi(): ForestApi {
         })
         clearTimeout(timer)
         const latencyMs = Date.now() - start
-        if (!res.ok) {
-          return { ok: false, latencyMs, error: `HTTP ${res.status}: ${res.statusText}` }
-        }
-        return { ok: true, latencyMs, message: `连接成功，延迟 ${latencyMs}ms` }
-      } catch (err: any) {
-        return { ok: false, latencyMs: Date.now() - start, error: err.message || '网络连接失败' }
+        if (!res.ok) return { ok: false, latencyMs, error: 'HTTP ' + res.status + ': ' + res.statusText }
+        return { ok: true, latencyMs, message: '连接成功，延迟 ' + latencyMs + 'ms' }
+      } catch (err) {
+        return { ok: false, latencyMs: Date.now() - start, error: (err as Error).message || '网络连接失败' }
       }
     },
 
     async discuss(p: DiscussInput): Promise<DiscussResult> {
-      const fallbackReplies: Record<string, string> = {
-        guardian: '我注意到你的疲惫与认真。你已经在承担很多了。如果现在允许自己放下 10% 的自责，你最想先给自己的边界留出什么空间？',
-        explorer: '如果把这次的阻碍视作一个提示信号而非判决，你觉得它最想引导你发现哪种新的应对方式？哪怕只是一个小试验？',
-        outsider: '跳出眼前的焦虑，设想一年后的你坐在安静的书房里回望今天，你最想对现在的自己说一句什么鼓励的话？',
-        mirror: '当我们感到失控时，往往把“最坏的猜想”误认成了“必然的现实”。试问：眼前切实发生的事实，与你担心的未来，边界在哪里？',
+      // 与三视角同一道门禁：没有同意记录，就没有认知挑战。
+      if (!currentConsentAt || !caps().canReflect) {
+        return { ok: false, error: '这一轮推敲没有有效的同意记录，不能继续。请回到分流重新选择。' }
       }
-      const fallbackReply = fallbackReplies[p.perspective] || '深呼吸，给自己的内心留一扇窗。你现在最需要的一份安心是什么？'
-
-      if (!modelConfig.apiKey?.trim()) {
-        setTimeout(() => {
-          discussionListeners.forEach((cb) =>
-            cb({
-              sessionId: p.sessionId,
-              perspective: p.perspective,
-              delta: fallbackReply,
-              done: true,
-            }),
-          )
-        }, 300)
-        return { ok: true, reply: fallbackReply }
+      const client = clientFromConfig(modelConfig)
+      if (!client.available) {
+        // ADR-0004：思考层不做内容兜底。
+        // 这里原本在失败或没配 key 时流出一段预写好的共情话术，冒充成回答。
+        return { ok: false, error: '模型未配置，这次没能生成。可以在设置里配置模型后重试。' }
       }
-
+      const ac = new AbortController()
+      const timer = setTimeout(() => ac.abort(), 30_000)
       try {
-        const cleanUrl = modelConfig.baseUrl.trim().replace(/\/+$/, '')
-        const url = cleanUrl.endsWith('/chat/completions')
-          ? cleanUrl
-          : cleanUrl.endsWith('/v1')
-            ? cleanUrl + '/chat/completions'
-            : cleanUrl + '/v1/chat/completions'
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            authorization: 'Bearer ' + modelConfig.apiKey.trim(),
-          },
-          body: JSON.stringify({
-            model: modelConfig.model.trim() || 'deepseek-chat',
-            messages: [
-              {
-                role: 'system',
-                content: `你正在以【${p.perspectiveTitle}】视角与用户展开苏格拉底式深入探讨。言简意赅控制在120字内，提出一个启发性的反问，促使自我觉察与行动，避免情绪反刍。`,
-              },
-              ...(p.history || []),
-              { role: 'user', content: p.userQuery },
-            ],
-          }),
-        })
-        if (!res.ok) throw new Error('HTTP ' + res.status)
-        const data = await res.json()
-        const content = data.choices?.[0]?.message?.content || fallbackReply
-        discussionListeners.forEach((cb) =>
-          cb({
-            sessionId: p.sessionId,
-            perspective: p.perspective,
-            delta: content,
-            done: true,
-          }),
-        )
-        return { ok: true, reply: content }
-      } catch {
-        setTimeout(() => {
+        let full = ''
+        for await (const chunk of client.discuss(p, ac.signal)) {
+          full += chunk
           discussionListeners.forEach((cb) =>
-            cb({
-              sessionId: p.sessionId,
-              perspective: p.perspective,
-              delta: fallbackReply,
-              done: true,
-            }),
+            cb({ sessionId: p.sessionId, perspective: p.perspective, delta: chunk, done: false }),
           )
-        }, 200)
-        return { ok: true, reply: fallbackReply }
+        }
+        clearTimeout(timer)
+        discussionListeners.forEach((cb) =>
+          cb({ sessionId: p.sessionId, perspective: p.perspective, delta: '', done: true }),
+        )
+        return { ok: true, reply: full }
+      } catch (err) {
+        clearTimeout(timer)
+        return { ok: false, error: (err as Error).message || '讨论生成遇到问题' }
       }
     },
 

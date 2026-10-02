@@ -45,9 +45,9 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
       return {
         ok: true,
         analysis: {
-          objectiveFact: '方案未通过并收到2条反馈',
-          subjectiveAssumption: '他们全盘否定我，我彻底搞砸了',
-          distortionBadge: '灾难化',
+          quotedInput: ['方案未通过'],
+          assumptions: ['他们是在全盘否定我'],
+          reframedQuestion: '除了这个解释，还有哪些可能？',
           socraticQuestions: {
             guardian: '守护者反问：你最想守护的核心边界是什么？',
             explorer: '探索者反问：如果把反对视为新输入，这里藏着什么机会？',
@@ -58,6 +58,7 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
             observableCriterion: '得到明确边界结论并记录在笔记中',
             estimatedMinutes: 5,
           },
+          promptVersion: 'test',
         },
       }
     },
@@ -315,18 +316,20 @@ describe('四幕界面逐幕走查', () => {
     await waitFor(() => expect(screen.getByText('继续')).toBeTruthy())
     fireEvent.click(screen.getByText('继续'))
 
-    // 验证客观事实与主观脑补剥离
-    await waitFor(() => expect(screen.getByText(/客观事实发生/)).toBeTruthy())
-    expect(screen.getByText('方案未通过并收到2条反馈')).toBeTruthy()
-    expect(screen.getByText(/主观脑补推论/)).toBeTruthy()
-    expect(screen.getByText('他们全盘否定我，我彻底搞砸了')).toBeTruthy()
-    expect(screen.getByText('灾难化')).toBeTruthy()
+    // 验证：可核对的逐字引用 与 标注为推断的模型读法 分开呈现
+    await waitFor(() => expect(screen.getByText(/你说过的原话/)).toBeTruthy())
+    expect(screen.getByText('方案未通过')).toBeTruthy()
+    expect(screen.getByText('💭 折返镜读到的前提')).toBeTruthy()
+    expect(screen.getByText('他们是在全盘否定我')).toBeTruthy()
+    expect(screen.getByText(/模型的推断，可能不准/)).toBeTruthy()
+    // 而且界面上不再出现任何认知扭曲标签（PRD §8.1 不诊断）
+    expect(screen.queryByText('灾难化')).toBeNull()
 
     // 验证苏格拉底反问
     expect(screen.getByText(/守护者反问：你最想守护的核心边界是什么？/)).toBeTruthy()
 
     // 验证微实验卡片与一键采纳
-    expect(screen.getByText(/5 分钟微行动实验建议/)).toBeTruthy()
+    expect(screen.getByText(/一个可撤回的小建议/)).toBeTruthy()
     expect(screen.getByText(/明天只找导师核实第一条修改建议/)).toBeTruthy()
     fireEvent.click(screen.getByText('采纳微实验留年轮'))
 
@@ -535,6 +538,3 @@ describe('四幕界面逐幕走查', () => {
     expect(noteInput.value).toContain('我还是有点忐忑')
   })
 })
-
-
-

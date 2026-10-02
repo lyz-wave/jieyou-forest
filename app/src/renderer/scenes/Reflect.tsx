@@ -25,51 +25,65 @@ export default function Reflect({ s }: { s: SessionController }) {
   const handleSaveInsight = (insightText: string) => {
     s.adoptExperiment({
       action: insightText,
-      observableCriterion: '在多轮苏格拉底推敲后明确了新的内心边界与行动',
+      observableCriterion: '在多轮推敲后明确了新的内心边界与行动',
       estimatedMinutes: 5,
     })
   }
 
   return (
     <div className="reflect-container">
-      {/* 第一层：事实与灾难化脑补剥离 */}
-      {analysis && (
+      {/* 第一层：你说过的原话 vs 折返镜读到的前提。
+          左边是逐字引用，可核对；右边是模型推断，必须标明可能不准。
+          这里原本是一个「客观事实 vs 主观脑补剥离」卡片加一枚「灾难化」标签——
+          给用户的想法贴认知扭曲标签就是诊断，PRD §8.1 明令禁止。 */}
+      {analysis && (analysis.quotedInput.length > 0 || analysis.assumptions.length > 0) && (
         <div
           className="card"
           style={{
             marginBottom: 20,
             padding: '20px 22px',
-            borderLeft: '4px solid #c8642d',
+            borderLeft: '4px solid #7d9a6a',
             background: 'rgba(255, 252, 246, 0.9)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ marginBottom: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.04em' }}>
-              🔍 客观事实 vs 主观脑补剥离
+              🔍 你说过的原话 vs 折返镜读到的前提
             </span>
-            {analysis.distortionBadge && (
-              <span className="chip" style={{ background: 'rgba(200, 100, 45, 0.15)', color: '#b04825', fontWeight: 600 }}>
-                {analysis.distortionBadge}
-              </span>
-            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div style={{ background: 'rgba(0,0,0,0.03)', padding: '12px 14px', borderRadius: 8 }}>
-              <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                📌 客观事实发生
+              <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                📌 你的原话（逐字引用，可核对）
               </span>
-              <p style={{ margin: 0, fontSize: 14, color: 'var(--text)', lineHeight: 1.5 }}>
-                {analysis.objectiveFact}
-              </p>
+              {analysis.quotedInput.length > 0 ? (
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, lineHeight: 1.6 }}>
+                  {analysis.quotedInput.map((q, i) => (
+                    <li key={i}>{q}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>这次没有可引用的原话。</p>
+              )}
             </div>
-            <div style={{ background: 'rgba(200, 100, 45, 0.05)', padding: '12px 14px', borderRadius: 8 }}>
-              <span style={{ fontSize: 11, color: '#b04825', fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                💭 主观脑补推论
+
+            <div style={{ background: 'rgba(125, 154, 106, 0.08)', padding: '12px 14px', borderRadius: 8 }}>
+              <span style={{ fontSize: 11, color: '#4d6944', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                💭 折返镜读到的前提
               </span>
-              <p style={{ margin: 0, fontSize: 14, color: 'var(--text)', lineHeight: 1.5 }}>
-                {analysis.subjectiveAssumption}
+              <p style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--muted)' }}>
+                以下是模型的推断，可能不准，你可以不认。
               </p>
+              {analysis.assumptions.length > 0 ? (
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, lineHeight: 1.6 }}>
+                  {analysis.assumptions.map((q, i) => (
+                    <li key={i}>{q}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>这次模型没有给出可核对的前提。</p>
+              )}
             </div>
           </div>
         </div>
@@ -77,17 +91,13 @@ export default function Reflect({ s }: { s: SessionController }) {
 
       {/* 第二层：苏格拉底反问 + 三视角与折返镜 */}
       {PANELS.map(([key, defaultTitle, defaultSocratic]) => {
-        const socratic = analysis?.socraticQuestions?.[key as keyof typeof analysis.socraticQuestions] || defaultSocratic
+        const socratic = analysis?.socraticQuestions?.[key] || defaultSocratic
         return (
           <div className="card" key={key} style={{ marginBottom: 14, padding: '18px 20px', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
               <div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>
-                  {defaultTitle}
-                </span>
-                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#3d6148', fontWeight: 600 }}>
-                  💡 {socratic}
-                </p>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{defaultTitle}</span>
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#3d6148', fontWeight: 600 }}>💡 {socratic}</p>
               </div>
               <button
                 type="button"
@@ -118,7 +128,7 @@ export default function Reflect({ s }: { s: SessionController }) {
         )
       })}
 
-      {/* 第三层：行动微实验建议 */}
+      {/* 第三层：行动微实验建议。只渲染模型真的产出的内容——没有就不出现。 */}
       {analysis?.microExperiment && (
         <div
           className="card"
@@ -131,18 +141,19 @@ export default function Reflect({ s }: { s: SessionController }) {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             <span style={{ fontSize: 16 }}>🧪</span>
-            <strong style={{ fontSize: 15, color: '#2d4b32' }}>5 分钟微行动实验建议</strong>
+            <strong style={{ fontSize: 15, color: '#2d4b32' }}>一个可撤回的小建议</strong>
             {analysis.microExperiment.estimatedMinutes && (
               <span className="chip" style={{ fontSize: 11, padding: '2px 8px', height: 'auto' }}>
                 约 {analysis.microExperiment.estimatedMinutes} 分钟
               </span>
             )}
           </div>
-          <p style={{ margin: '6px 0 4px', fontSize: 14, fontWeight: 600 }}>
-            {analysis.microExperiment.action}
-          </p>
-          <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--muted)' }}>
+          <p style={{ margin: '6px 0 4px', fontSize: 14, fontWeight: 600 }}>{analysis.microExperiment.action}</p>
+          <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--muted)' }}>
             判据：{analysis.microExperiment.observableCriterion}
+          </p>
+          <p style={{ margin: '0 0 16px', fontSize: 11, color: 'var(--muted)' }}>
+            这只是建议，不是处方。你可以改写它，也可以完全不采纳。
           </p>
           <button className="primary" onClick={() => s.adoptExperiment(analysis.microExperiment!)}>
             采纳微实验留年轮

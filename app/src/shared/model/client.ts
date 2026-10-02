@@ -1,4 +1,4 @@
-import type { DiscussInput, TestModelResult } from '../../shared/ipc'
+import type { DiscussInput, TestModelResult } from '../ipc'
 import type { ThreeViews } from '../orchestrate/reflection'
 
 export interface ModelConfig {
@@ -15,6 +15,10 @@ export interface ReflectionResult {
   quotedInput: string[]
   assumptions?: string[]
   reframedQuestion?: string
+  /** 由模型按用户的具体处境生成。生成不出来就留空——不塞通用话术。 */
+  socraticQuestions?: Partial<Record<'guardian' | 'explorer' | 'outsider' | 'mirror', string>>
+  /** 建议，不是处方。用户可以不采纳，也可以自己改写。 */
+  microExperiment?: { action: string; observableCriterion: string; estimatedMinutes?: number }
   promptVersion: string
 }
 
@@ -261,8 +265,13 @@ function reflectMessages(input: string) {
       content:
         '用户已明确同意检查自己的想法。一次输出三个视角（守护者/探索者/局外人）与一面折返镜。' +
         '三视角不是三个独立智能体，是你一次思考的三个角度。所有引用用户原话的片段必须逐字来自用户输入。' +
-        '信息不足时就说信息不足，不要编造历史。返回 JSON：' +
-        '{"views":{"guardian":"","explorer":"","outsider":""},"quotedInput":[],"assumptions":[],"reframedQuestion":""}',
+        '信息不足时就说信息不足，不要编造历史。' +
+        '【硬约束】不要给用户的想法贴任何认知扭曲标签（如"灾难化""以偏概全"），不要诊断，不要说教。' +
+        'socraticQuestions 与 microExperiment 必须针对这位用户这次说的具体内容来写；' +
+        '写不出来就留空，绝不要填通用模板。microExperiment 是一个可撤回的小建议，不是处方。返回 JSON：' +
+        '{"views":{"guardian":"","explorer":"","outsider":""},"quotedInput":[],"assumptions":[],"reframedQuestion":"",' +
+        '"socraticQuestions":{"guardian":"","explorer":"","outsider":"","mirror":""},' +
+        '"microExperiment":{"action":"","observableCriterion":"","estimatedMinutes":5}}',
     },
     { role: 'user', content: input },
   ]
@@ -273,7 +282,7 @@ function buildDiscussMessages(input: DiscussInput) {
     guardian: '你正在以【守护者】的视角与用户深入探讨。你的使命是保护对方的心理能量与真实边界，识别疲惫与过度自我苛责，提供接纳感，同时反问对方「什么才是真正重要的底线与自我关照？」。',
     explorer: '你正在以【探索者】的视角与用户深入探讨。你的使命是激发好奇心，将看似死胡同的困境转化为探索实验的可能，反问对方「有没有一个极低成本、随时可撤回的小尝试？如果把这当成一个有趣的数据点呢？」。',
     outsider: '你正在以【局外人】的视角与用户深入探讨。你的使命是提供第三人称和长周期的时空纵深，拉开与当下情绪风暴的距离，反问对方「若站在一年后回看今天，这件事情真正留下的会是什么？其他在场的人可能会有怎样的局限与视角？」。',
-    mirror: '你正在以【重构之镜】的视角与用户深入探讨。你的使命是温和映照出思维中的全或无、绝对化或读心术等认知偏差，反问对方「事实与脑补的边界在哪里？」。',
+    mirror: '你正在以【重构之镜】的视角与用户深入探讨。你的使命是温和地区分「已经发生的事」与「对它的解释」，让对方自己看见两者之间的空隙，反问对方「哪一部分是你亲眼所见，哪一部分是你补上去的？」。不要给对方的想法贴认知偏差的标签，也不要诊断。',
   }
   const desc = roleDescriptions[input.perspective] || '你是一个富有同理心且具苏格拉底式反思智慧的陪伴者。'
   const systemPrompt =

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { capabilitiesFor, type GateResult } from '../gate/gate'
+import { capabilitiesFor, type GateResult } from '../../shared/gate/gate'
 import type { Capabilities, SessionPath, SessionStatus } from '../../shared/types'
 
 export interface LiveSession {

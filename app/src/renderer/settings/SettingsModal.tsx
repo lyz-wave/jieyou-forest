@@ -348,7 +348,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           }}
         >
           🔒 <strong>隐私与安全承诺：</strong>
-          密钥与请求地址仅保存在本机（SQLite / localStorage）。
+          密钥与请求地址仅保存在本机（SQLite / localStorage），且<strong>明文、不加密</strong>——
+          能访问这台电脑文件系统的人就能读到。请不要在这台机器上使用你不放心外泄的密钥。
           应用直接通过本地网络与你的目标端点发起通信，零中转、零云端留存。即便完全不配置 API，也能离线完整使用所有舒缓与年轮功能。
         </div>
 

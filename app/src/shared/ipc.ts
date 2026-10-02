@@ -70,15 +70,17 @@ export interface MicroExperiment {
 }
 
 export interface CognitiveAnalysis {
-  objectiveFact: string
-  subjectiveAssumption: string
-  distortionBadge?: string
-  socraticQuestions?: {
-    guardian?: string
-    explorer?: string
-    outsider?: string
-  }
+  /** 逐字引用自用户输入的原话。可核对，不是推断。 */
+  quotedInput: string[]
+  /** 折返镜读到的前提。属模型推断，界面必须标注为推断。 */
+  assumptions: string[]
+  /** 折返镜提出的替代问题。 */
+  reframedQuestion: string
+  /** 各视角的反问。由模型生成；生成不出来就缺席，不塞通用话术。 */
+  socraticQuestions?: Partial<Record<ReflectionCardId, string>>
+  /** 微行动建议。是建议不是处方，用户可以不采纳。模型没给就缺席。 */
   microExperiment?: MicroExperiment
+  promptVersion: string
 }
 
 export interface ConsentResult {

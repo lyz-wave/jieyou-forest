@@ -7,7 +7,16 @@ export interface ThreeViews {
 }
 
 export type ReflectionOutcome =
-  | { ok: true; views: ThreeViews; quotedInput: string[]; assumptions: string[]; reframedQuestion?: string; promptVersion: string }
+  | {
+      ok: true
+      views: ThreeViews
+      quotedInput: string[]
+      assumptions: string[]
+      reframedQuestion?: string
+      socraticQuestions?: Partial<Record<'guardian' | 'explorer' | 'outsider' | 'mirror', string>>
+      microExperiment?: { action: string; observableCriterion: string; estimatedMinutes?: number }
+      promptVersion: string
+    }
   | { ok: false; reason: 'no_consent' | 'timeout' | 'invalid' | 'unavailable' }
 
 /** PRD F05 验收：所有用户原话引用必须逐字匹配输入。不匹配就整次丢弃。 */
@@ -40,6 +49,8 @@ export async function runReflection(deps: {
       quotedInput: r.quotedInput,
       assumptions: r.assumptions ?? [],
       reframedQuestion: r.reframedQuestion,
+      socraticQuestions: r.socraticQuestions,
+      microExperiment: r.microExperiment,
       promptVersion: r.promptVersion,
     }
   } catch {

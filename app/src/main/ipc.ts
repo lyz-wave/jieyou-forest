@@ -1,11 +1,19 @@
 import { app, ipcMain, type BrowserWindow } from 'electron'
 import { join } from 'node:path'
-import { CH, type DiscussInput, type ModelConfigDto, type SaveRingInput, type SendChannel, type SubmitInput } from '../shared/ipc'
-import rules from './gate/rules.json'
-import { applyCorrection, capabilitiesFor, evaluateGate, type RulesFile } from './gate/gate'
-import { createModelClient, loadConfig, testConnection, type ModelClient } from './model/client'
-import { runReceive } from './orchestrate/receive'
-import { runReflection, type ThreeViews } from './orchestrate/reflection'
+import {
+  CH,
+  type CognitiveAnalysis,
+  type DiscussInput,
+  type ModelConfigDto,
+  type SaveRingInput,
+  type SendChannel,
+  type SubmitInput,
+} from '../shared/ipc'
+import rules from '../shared/gate/rules.json'
+import { applyCorrection, capabilitiesFor, evaluateGate, type RulesFile } from '../shared/gate/gate'
+import { createModelClient, loadConfig, testConnection, type ModelClient } from '../shared/model/client'
+import { runReceive } from '../shared/orchestrate/receive'
+import { runReflection, type ThreeViews } from '../shared/orchestrate/reflection'
 import { canEnterReflection, SessionMemory } from './orchestrate/session'
 import { openDatabase } from './store/db'
 import * as repo from './store/repo'
@@ -136,20 +144,17 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     for (const [card, text] of cards) {
       send(CH.send.reflection, { sessionId, card, delta: text, done: true })
     }
-    const analysis = {
-      objectiveFact: outcome.quotedInput || s.input,
-      subjectiveAssumption: outcome.assumptions?.[0] || '我担心事情会彻底失控',
-      distortionBadge: '灾难化',
-      socraticQuestions: {
-        guardian: '守护者反问：你真正想保护的需求或边界是什么？',
-        explorer: '探索者反问：有没有一个低成本、可撤回的小试验？',
-        outsider: '局外人反问：除了眼前这个解释，还有哪些可能？',
-      },
-      microExperiment: {
-        action: '尝试向相关方核实一次具体客观事实',
-        observableCriterion: '记录下真实的答复，对比自己预设的脑补',
-        estimatedMinutes: 5,
-      },
+    // 只呈现模型真的产出的内容。
+    // 这里原本塞着硬编码的「灾难化」标签、兜底的脑补推论、三段通用反问与一个通用微行动：
+    // 既是给用户的心理状态贴诊断标签（PRD §8.1 明令禁止「不能诊断心理状态」），
+    // 也是把编造的内容冒充成对这一次输入的分析（ADR-0004）。
+    const analysis: CognitiveAnalysis = {
+      quotedInput: (outcome.quotedInput ?? []).filter((q) => typeof q === 'string' && q.trim().length > 0),
+      assumptions: outcome.assumptions ?? [],
+      reframedQuestion: outcome.reframedQuestion ?? '',
+      socraticQuestions: outcome.socraticQuestions,
+      microExperiment: outcome.microExperiment,
+      promptVersion: outcome.promptVersion,
     }
     return { ok: true as const, quotedInput: outcome.quotedInput, assumptions: outcome.assumptions, analysis }
   })
@@ -236,21 +241,17 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   ipcMain.handle(CH.invoke.discuss, async (_e, payload: DiscussInput) => {
     const c = must()
+    const s = c.memory.get(payload.sessionId)
+    // 与三视角同一道门禁：没有同意记录，就没有认知挑战。
+    // 这里原本直接放行，等于给「经过你同意才提问」开了一个后门。
+    if (!s || !canEnterReflection(s)) {
+      return { ok: false, error: '这一轮推敲没有有效的同意记录，不能继续。请回到分流重新选择。' }
+    }
     if (!c.model.available) {
-      const fallbackReplies: Record<string, string> = {
-        guardian: '我注意到你的疲惫与认真。你已经在承担很多了。如果现在允许自己放下 10% 的自责，你最想先给自己的边界留出什么空间？',
-        explorer: '如果把这次的阻碍视作一个提示信号而非判决，你觉得它最想引导你发现哪种新的应对方式？哪怕只是一个小试验？',
-        outsider: '跳出眼前的焦虑，设想一年后的你坐在安静的书房里回望今天，你最想对现在的自己说一句什么鼓励的话？',
-        mirror: '当我们感到失控时，往往把“最坏的猜想”误认成了“必然的现实”。试问：眼前切实发生的事实，与你担心的未来，边界在哪里？',
-      }
-      const fallbackReply = fallbackReplies[payload.perspective] || '深呼吸，给自己的内心留一扇窗。你现在最需要的一份安心是什么？'
-      send(CH.send.discussionDelta, {
-        sessionId: payload.sessionId,
-        perspective: payload.perspective,
-        delta: fallbackReply,
-        done: true,
-      })
-      return { ok: true, reply: fallbackReply }
+      // ADR-0004：思考层不做内容兜底。
+      // 这里原本有一段预写好的共情话术，流式播出、冒充成针对用户提问的回答，
+      // 界面上完全看不出它是固定模板。评审问一句「这是模型刚生成的吗」就穿帮。
+      return { ok: false, error: '模型未配置，这次没能生成。可以在右上角「模型设置」里配置后重试。' }
     }
 
     try {
