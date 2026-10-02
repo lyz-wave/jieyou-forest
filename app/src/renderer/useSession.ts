@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Capabilities, ReflectionCardId, RingDraft, RingRow } from '../shared/types'
 import type { CognitiveAnalysis, MicroExperiment, RingResonance } from '../shared/ipc'
+import { capabilitiesFor } from '../shared/capabilities'
 
 export type Scene =
   | 'express' | 'crisis' | 'space' | 'rest' | 'consent' | 'reflect' | 'unfinished' | 'save' | 'tree'
@@ -12,6 +13,8 @@ export interface SessionController {
   sessionId: string
   caps: Capabilities
   banner: string | null
+  /** 承接回应还在路上。用来禁用提交按钮、显示呼吸占位。 */
+  awaiting: boolean
   receive: string
   cards: Partial<Record<ReflectionCardId, string>>
   analysis?: CognitiveAnalysis
@@ -51,13 +54,43 @@ export function useSession(): SessionController {
   const [reason, setReason] = useState('')
   const [notice, setNotice] = useState('')
   const [rings, setRings] = useState<RingRow[]>([])
+  const [awaiting, setAwaiting] = useState(false)
+
+  /** 当前会话 id。事件带的 sessionId 必须与它对上，迟到的旧会话数据不许进界面。 */
+  const activeSessionRef = useRef('')
+  /** verdict 事件是否已经切过场景。避免 submit 返回时重复切一次造成闪动。 */
+  const switchedRef = useRef(false)
 
   useEffect(() => {
-    const offReceive = window.forest.onReceive((p) => setReceive((t) => t + p.delta))
+    const offReceive = window.forest.onReceive((p) => {
+      // 按会话过滤。连点或重试时会有多个会话的回应在飞，
+      // 不过滤的话两段文字会交织在同一个 receive 里——这是真发生过的 bug。
+      if (p.sessionId !== activeSessionRef.current) return
+      setReceive((t) => t + p.delta)
+    })
     const offReflection = window.forest.onReflection((p) => setCards((c) => ({ ...c, [p.card]: p.delta })))
+
+    // 这两条通道主进程一直在发，而渲染层从来没有订阅过。
+    // 关键在于：它们在**调用模型之前**就已经发出，所以可以拿来立刻切场景——
+    // 而原来的做法是等整段回应生成完才切，那正是"点了像卡住"的原因。
+    const offVerdict = window.forest.onVerdict((p) => {
+      activeSessionRef.current = p.sessionId
+      const next = capabilitiesFor(p.level)
+      setSessionId(p.sessionId)
+      setCaps(next)
+      switchedRef.current = true
+      setScene(next.canShowCrisis ? 'crisis' : 'space')
+    })
+    const offState = window.forest.onState((p) => {
+      if (p.sessionId !== activeSessionRef.current) return
+      setAwaiting(p.status === 'receiving')
+    })
+
     return () => {
       offReceive()
       offReflection()
+      offVerdict()
+      offState()
     }
   }, [])
 
@@ -67,12 +100,23 @@ export function useSession(): SessionController {
       return
     }
     setNotice('')
-    const r = await window.forest.submit({ input })
-    setSessionId(r.sessionId)
-    setCaps(r.capabilities)
-    setBanner(r.banner)
-    setResonance(r.resonance ?? undefined)
-    setScene(r.capabilities.canShowCrisis ? 'crisis' : 'space')
+    setReceive('')
+    setBanner(null)
+    setResonance(undefined)
+    switchedRef.current = false
+    setAwaiting(true)
+    try {
+      const r = await window.forest.submit({ input })
+      setSessionId(r.sessionId)
+      setCaps(r.capabilities)
+      setBanner(r.banner)
+      setResonance(r.resonance ?? undefined)
+      // 正常情况下 verdict 事件已经切过场景了（毫秒级）。
+      // 这里是兜底：万一事件没走到（例如 L1 提前返回），也要落到正确的幕。
+      if (!switchedRef.current) setScene(r.capabilities.canShowCrisis ? 'crisis' : 'space')
+    } finally {
+      setAwaiting(false)
+    }
   }, [input])
 
 
@@ -112,8 +156,15 @@ export function useSession(): SessionController {
   }, [sessionId])
 
   const retryReceive = useCallback(async () => {
-    const r = await window.forest.retryReceive({ sessionId })
-    setBanner(r.banner)
+    setReceive('')
+    setBanner(null)
+    setAwaiting(true)
+    try {
+      const r = await window.forest.retryReceive({ sessionId })
+      setBanner(r.banner)
+    } finally {
+      setAwaiting(false)
+    }
   }, [sessionId])
 
   const openTree = useCallback(async () => {
@@ -151,7 +202,7 @@ export function useSession(): SessionController {
   }, [])
 
   return {
-    scene, input, sessionId, caps, banner, receive, cards, analysis, adoptedExperiment, resonance, reason, notice, rings,
+    scene, input, sessionId, caps, banner, awaiting, receive, cards, analysis, adoptedExperiment, resonance, reason, notice, rings,
     setInput, go: setScene, submit, choose, consent, adoptExperiment, cancelReflect, correct,
     retryReceive, saveRing, openTree, removeRing, startOver,
   }

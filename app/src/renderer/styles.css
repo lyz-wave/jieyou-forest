@@ -147,6 +147,35 @@ h2 { font-weight: 600; }
 .sub { color: var(--muted); font-size: 13px; margin: 0 0 26px; }
 .muted { color: var(--muted); font-size: 13px; }
 
+/* 承接回应还没到时的呼吸占位。
+   纯明暗起伏，无位移、无旋转、无百分比——它传达的是"正在形成"，不是"正在处理"。
+   减少动画开启时完全静止，只剩一个淡灰占位。 */
+.breath {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 3px 0;
+}
+.breath span {
+  display: block;
+  height: 10px;
+  border-radius: 6px;
+  background: rgba(120, 104, 82, 0.18);
+  animation: breath 2.8s ease-in-out infinite;
+}
+.breath span:nth-child(1) { width: 82%; }
+.breath span:nth-child(2) { width: 94%; animation-delay: 0.5s; }
+.breath span:nth-child(3) { width: 56%; animation-delay: 1s; }
+
+@keyframes breath {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breath span { animation: none; opacity: 0.7; }
+}
+
 .scene { animation: scene-in var(--t-slow) var(--spring) both; }
 
 @keyframes scene-in {

@@ -65,8 +65,10 @@ export default function Express({ s }: { s: SessionController }) {
         </div>
       </div>
       <div className="row">
-        <button className="primary" onClick={s.submit} disabled={!s.input.trim()}>
-          说完了
+        {/* 请求进行中必须禁用：连点会创建多个会话，而两段回应的字会交织在一起。
+            文案同时变掉——虽然切场景是毫秒级的，IPC 冷启动时仍会短暂看到它。 */}
+        <button className="primary" onClick={s.submit} disabled={!s.input.trim() || s.awaiting}>
+          {s.awaiting ? '正在接住…' : '说完了'}
         </button>
       </div>
       {s.notice && <p className="muted">{s.notice}</p>}

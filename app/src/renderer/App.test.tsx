@@ -3,7 +3,9 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
 import { capabilitiesFor } from '../shared/capabilities'
-import type { DiscussionChunk, ForestApi, ReceiveChunk, ReflectionChunk } from '../shared/ipc'
+import type {
+  DiscussionChunk, ForestApi, ReceiveChunk, ReflectionChunk, StateEvent, VerdictEvent,
+} from '../shared/ipc'
 import type { Capabilities, RingDraft, RingRow } from '../shared/types'
 import { findResonantRing } from '../shared/resonance'
 
@@ -18,14 +20,23 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
   const receiveListeners: Array<(p: ReceiveChunk) => void> = []
   const reflectionListeners: Array<(p: ReflectionChunk) => void> = []
   const discussionListeners: Array<(p: DiscussionChunk) => void> = []
+  const verdictListeners: Array<(p: VerdictEvent) => void> = []
+  const stateListeners: Array<(p: StateEvent) => void> = []
   const rings: RingRow[] = opts.initialRings ? [...opts.initialRings] : []
 
 
   const api: ForestApi = {
     submit: async (p) => {
+      // 忠实模拟主进程的发事件顺序，这是真实的契约：
+      //   verdict（带级别与 sessionId）→ state(receiving) → 分片 → state(choosing)
+      // 渲染层靠 verdict 立刻切场景、并拿它过滤后续分片；
+      // 顺序反了或漏发，分片会被丢掉——所以这里不能省。
+      verdictListeners.forEach((cb) => cb({ sessionId: 's1', level }))
+      stateListeners.forEach((cb) => cb({ sessionId: 's1', status: 'receiving' }))
       receiveListeners.forEach((cb) =>
         cb({ sessionId: 's1', delta: '被这样对待，确实可能让人难受。', done: true }),
       )
+      stateListeners.forEach((cb) => cb({ sessionId: 's1', status: 'choosing' }))
       const resonance = p?.input ? findResonantRing(p.input, rings) : null
       return { sessionId: 's1', capabilities: capsFor(), banner: null, resonance }
     },
@@ -108,8 +119,8 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; in
         if (i >= 0) discussionListeners.splice(i, 1)
       }
     },
-    onVerdict: () => () => {},
-    onState: () => () => {},
+    onVerdict: (cb) => { verdictListeners.push(cb); return () => {} },
+    onState: (cb) => { stateListeners.push(cb); return () => {} },
     onError: () => () => {},
   }
   return { api, rings }

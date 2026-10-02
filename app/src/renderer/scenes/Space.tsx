@@ -66,7 +66,27 @@ export default function Space({ s }: { s: SessionController }) {
         </div>
       )}
 
-      <div className="card">{s.receive || '……'}</div>
+      {/* 等待期不是"……"，是三条呼吸的横线——像一句还没写完的话。
+          刻意不做进度条：进度条天然承诺"快好了"，而模型可能要十几秒，
+          一个卡在 90% 的进度条比什么都不显示更让人烦躁。 */}
+      <div className="card">
+        {s.receive ? (
+          s.receive
+        ) : s.awaiting ? (
+          <>
+            <div className="breath" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+            <p className="muted" style={{ fontSize: 12, margin: '10px 0 0' }}>
+              正在接住
+            </p>
+          </>
+        ) : (
+          '……'
+        )}
+      </div>
 
       <div className="row">
         {s.caps.canRest && <button className="primary" onClick={() => s.choose('rest')}>先歇一会儿</button>}
@@ -77,8 +97,11 @@ export default function Space({ s }: { s: SessionController }) {
         )}
         <button className="ghost" onClick={() => s.go('express')}>今天先到这里</button>
       </div>
-      {!s.banner && (
-        <button className="ghost" onClick={s.retryReceive}>重试这次回应</button>
+      {/* 重试要在**兜底之后**出现。原来写的是 {!s.banner && ...}——
+          而横幅恰恰是模型失败、切了兜底稿时才出现的，
+          于是最该重试的那一刻按钮消失了，与 PRD §10「45 秒超时提示重试」正相反。 */}
+      {s.banner && (
+        <button className="ghost" onClick={s.retryReceive} disabled={s.awaiting}>重试这次回应</button>
       )}
     </>
   )
