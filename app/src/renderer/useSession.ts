@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Capabilities, ReflectionCardId, RingDraft, RingRow } from '../shared/types'
+import type { CognitiveAnalysis, MicroExperiment } from '../shared/ipc'
 
 export type Scene =
   | 'express' | 'crisis' | 'space' | 'rest' | 'consent' | 'reflect' | 'unfinished' | 'save' | 'tree'
@@ -14,6 +15,8 @@ export interface SessionController {
   banner: string | null
   receive: string
   cards: Partial<Record<ReflectionCardId, string>>
+  analysis?: CognitiveAnalysis
+  adoptedExperiment?: MicroExperiment
   reason: string
   notice: string
   rings: RingRow[]
@@ -24,6 +27,7 @@ export interface SessionController {
   submit: () => Promise<void>
   choose: (path: 'rest' | 'reflect') => Promise<void>
   consent: () => Promise<void>
+  adoptExperiment: (exp: MicroExperiment) => void
   cancelReflect: () => Promise<void>
   correct: () => Promise<void>
   retryReceive: () => Promise<void>
@@ -42,6 +46,8 @@ export function useSession(): SessionController {
   const [banner, setBanner] = useState<string | null>(null)
   const [receive, setReceive] = useState('')
   const [cards, setCards] = useState<Partial<Record<ReflectionCardId, string>>>({})
+  const [analysis, setAnalysis] = useState<CognitiveAnalysis>()
+  const [adoptedExperiment, setAdoptedExperiment] = useState<MicroExperiment>()
   const [reason, setReason] = useState('')
   const [notice, setNotice] = useState('')
   const [rings, setRings] = useState<RingRow[]>([])
@@ -78,12 +84,19 @@ export function useSession(): SessionController {
 
   const consent = useCallback(async () => {
     const r = await window.forest.consent({ sessionId })
-    if (r.ok) setScene('reflect')
-    else {
+    if (r.ok) {
+      if (r.analysis) setAnalysis(r.analysis)
+      setScene('reflect')
+    } else {
       setReason(r.reason ?? 'invalid')
       setScene('unfinished')
     }
   }, [sessionId])
+
+  const adoptExperiment = useCallback((exp: MicroExperiment) => {
+    setAdoptedExperiment(exp)
+    setScene('save')
+  }, [])
 
   const cancelReflect = useCallback(async () => {
     await window.forest.cancelReflect({ sessionId })
@@ -128,13 +141,15 @@ export function useSession(): SessionController {
     setInput('')
     setReceive('')
     setCards({})
+    setAnalysis(undefined)
+    setAdoptedExperiment(undefined)
     setNotice('')
     setScene('express')
   }, [])
 
   return {
-    scene, input, emotion, sessionId, caps, banner, receive, cards, reason, notice, rings,
-    setInput, setEmotion, go: setScene, submit, choose, consent, cancelReflect, correct,
+    scene, input, emotion, sessionId, caps, banner, receive, cards, analysis, adoptedExperiment, reason, notice, rings,
+    setInput, setEmotion, go: setScene, submit, choose, consent, adoptExperiment, cancelReflect, correct,
     retryReceive, saveRing, openTree, removeRing, startOver,
   }
 }

@@ -119,7 +119,22 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     for (const [card, text] of cards) {
       send(CH.send.reflection, { sessionId, card, delta: text, done: true })
     }
-    return { ok: true as const, quotedInput: outcome.quotedInput, assumptions: outcome.assumptions }
+    const analysis = {
+      objectiveFact: outcome.quotedInput || s.input,
+      subjectiveAssumption: outcome.assumptions?.[0] || '我担心事情会彻底失控',
+      distortionBadge: '灾难化',
+      socraticQuestions: {
+        guardian: '守护者反问：你真正想保护的需求或边界是什么？',
+        explorer: '探索者反问：有没有一个低成本、可撤回的小试验？',
+        outsider: '局外人反问：除了眼前这个解释，还有哪些可能？',
+      },
+      microExperiment: {
+        action: '尝试向相关方核实一次具体客观事实',
+        observableCriterion: '记录下真实的答复，对比自己预设的脑补',
+        estimatedMinutes: 5,
+      },
+    }
+    return { ok: true as const, quotedInput: outcome.quotedInput, assumptions: outcome.assumptions, analysis }
   })
 
   ipcMain.handle(CH.invoke.cancelReflect, (_e, { sessionId }: { sessionId: string }) => {

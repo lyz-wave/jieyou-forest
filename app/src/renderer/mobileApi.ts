@@ -101,7 +101,24 @@ export function createMobileForestApi(): ForestApi {
           cb({ sessionId, card: 'mirror', delta: '重构之镜：有没有可能，这并不是你的失败，而是一个重新定义边界的契机？', done: true }),
         )
       }, 350)
-      return { ok: true }
+      return {
+        ok: true,
+        analysis: {
+          objectiveFact: currentInput || '今天收到了一条令自己受挫的反馈',
+          subjectiveAssumption: '他们全盘否定我，我彻底搞砸了',
+          distortionBadge: '灾难化',
+          socraticQuestions: {
+            guardian: '守护者反问：你最想守护的核心边界和个人底线是什么？',
+            explorer: '探索者反问：如果把反对意见当作路标，这里藏着什么新可能？',
+            outsider: '局外人反问：一年后的你回看今天，会怎么看待这个小插曲？',
+          },
+          microExperiment: {
+            action: '明天只找关键人核实第一个修改点',
+            observableCriterion: '得到明确边界结论并记录在笔记中',
+            estimatedMinutes: 5,
+          },
+        },
+      }
     },
 
     async cancelReflect({ sessionId }): Promise<StatusResult> {

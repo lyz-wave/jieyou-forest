@@ -3,11 +3,12 @@ import type { SessionController } from '../useSession'
 import type { RingType } from '../../shared/types'
 
 export default function RingConfirm({ s }: { s: SessionController }) {
-  const [kind, setKind] = useState<RingType>('support')
-  const [note, setNote] = useState('')
+  const [kind, setKind] = useState<RingType>(s.adoptedExperiment ? 'action' : 'support')
+  const [note, setNote] = useState(s.adoptedExperiment ? '微行动：' + s.adoptedExperiment.action : '')
   const [saveOriginal, setSaveOriginal] = useState(false)
-  const [action, setAction] = useState('')
-  const [criterion, setCriterion] = useState('')
+
+  const [action, setAction] = useState(s.adoptedExperiment?.action ?? '')
+  const [criterion, setCriterion] = useState(s.adoptedExperiment?.observableCriterion ?? '')
   const [reviewDue, setReviewDue] = useState('')
 
   return (
@@ -18,19 +19,20 @@ export default function RingConfirm({ s }: { s: SessionController }) {
           陪伴年轮（只要一句观察）
         </button>
         <button className="chip" aria-pressed={kind === 'action'} onClick={() => setKind('action')}>
-          行动年轮（带一个小实验）
+          行动年轮（带小行动）
         </button>
       </div>
+
       <label className="field">你自己的一句话</label>
-      <input type="text" value={note} onChange={(e) => setNote(e.target.value)} />
+      <input type="text" aria-label="你自己的一句话" value={note} onChange={(e) => setNote(e.target.value)} />
       {kind === 'action' && (
         <>
           <label className="field">一个小行动</label>
-          <input type="text" value={action} onChange={(e) => setAction(e.target.value)} />
+          <input type="text" aria-label="一个小行动" value={action} onChange={(e) => setAction(e.target.value)} />
           <label className="field">怎么算做到了（可观察的判据）</label>
-          <input type="text" value={criterion} onChange={(e) => setCriterion(e.target.value)} />
+          <input type="text" aria-label="怎么算做到了（可观察的判据）" value={criterion} onChange={(e) => setCriterion(e.target.value)} />
           <label className="field">什么时候回来看（复盘日）</label>
-          <input type="date" value={reviewDue} onChange={(e) => setReviewDue(e.target.value)} />
+          <input type="date" aria-label="什么时候回来看（复盘日）" value={reviewDue} onChange={(e) => setReviewDue(e.target.value)} />
         </>
       )}
       <label className="field">

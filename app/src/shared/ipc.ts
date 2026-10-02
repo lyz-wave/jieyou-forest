@@ -52,9 +52,28 @@ export interface CorrectResult {
   level: SafetyLevel
   capabilities: Capabilities
 }
+export interface MicroExperiment {
+  action: string
+  observableCriterion: string
+  estimatedMinutes?: number
+}
+
+export interface CognitiveAnalysis {
+  objectiveFact: string
+  subjectiveAssumption: string
+  distortionBadge?: string
+  socraticQuestions?: {
+    guardian?: string
+    explorer?: string
+    outsider?: string
+  }
+  microExperiment?: MicroExperiment
+}
+
 export interface ConsentResult {
   ok: boolean
   reason?: string
+  analysis?: CognitiveAnalysis
 }
 export interface StatusResult {
   status: SessionStatus

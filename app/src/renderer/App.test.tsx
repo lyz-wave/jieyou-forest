@@ -37,7 +37,24 @@ function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean } =
       reflectionListeners.forEach((cb) =>
         cb({ sessionId: 's1', card: 'mirror', delta: '你有没有想过另一种可能？', done: true }),
       )
-      return { ok: true }
+      return {
+        ok: true,
+        analysis: {
+          objectiveFact: '方案未通过并收到2条反馈',
+          subjectiveAssumption: '他们全盘否定我，我彻底搞砸了',
+          distortionBadge: '灾难化',
+          socraticQuestions: {
+            guardian: '守护者反问：你最想守护的核心边界是什么？',
+            explorer: '探索者反问：如果把反对视为新输入，这里藏着什么机会？',
+            outsider: '局外人反问：一年后的你看今天，会怎么评价这个插曲？',
+          },
+          microExperiment: {
+            action: '明天只找导师核实第一条修改建议',
+            observableCriterion: '得到明确边界结论并记录在笔记中',
+            estimatedMinutes: 5,
+          },
+        },
+      }
     },
     cancelReflect: async () => ({ status: 'choosing' }),
     saveRing: async ({ draft, idempotencyKey }: { draft: RingDraft; idempotencyKey: string }) => {
@@ -267,4 +284,38 @@ describe('四幕界面逐幕走查', () => {
     // 注：hook 里那句「空白提交不会开始一次表达」目前在界面上够不着——按钮先一步禁用了。
     // 让它可达属于另一张票（#5 的「空白提交就地提示」），本次重构只如实锁定现状。
   })
+
+  it('多维认知重塑：事实剥离、苏格拉底反问并采纳微实验为行动年轮', async () => {
+    boot()
+    await expressAndSubmit()
+    fireEvent.click(screen.getByText('陪我想一想'))
+    await waitFor(() => expect(screen.getByText('继续')).toBeTruthy())
+    fireEvent.click(screen.getByText('继续'))
+
+    // 验证客观事实与主观脑补剥离
+    await waitFor(() => expect(screen.getByText(/客观事实发生/)).toBeTruthy())
+    expect(screen.getByText('方案未通过并收到2条反馈')).toBeTruthy()
+    expect(screen.getByText(/主观脑补推论/)).toBeTruthy()
+    expect(screen.getByText('他们全盘否定我，我彻底搞砸了')).toBeTruthy()
+    expect(screen.getByText('灾难化')).toBeTruthy()
+
+    // 验证苏格拉底反问
+    expect(screen.getByText(/守护者反问：你最想守护的核心边界是什么？/)).toBeTruthy()
+
+    // 验证微实验卡片与一键采纳
+    expect(screen.getByText(/5 分钟微行动实验建议/)).toBeTruthy()
+    expect(screen.getByText(/明天只找导师核实第一条修改建议/)).toBeTruthy()
+    fireEvent.click(screen.getByText('采纳微实验留年轮'))
+
+
+    // 验证跳转到行动年轮确认，并预填行动与指标
+    await waitFor(() => expect(screen.getByText('行动年轮（带小行动）')).toBeTruthy())
+    expect(screen.getByDisplayValue('明天只找导师核实第一条修改建议')).toBeTruthy()
+    expect(screen.getByDisplayValue('得到明确边界结论并记录在笔记中')).toBeTruthy()
+
+    // 保存行动年轮
+    fireEvent.click(screen.getByText('保存'))
+    await waitFor(() => expect(screen.getByText(/明天只找导师核实第一条修改建议/)).toBeTruthy())
+  })
 })
+
