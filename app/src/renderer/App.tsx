@@ -1,8 +1,7 @@
-import grainUrl from './grain.png'
 import type { SessionController } from './useSession'
 import { useSession } from './useSession'
-import Foliage from './foliage/Foliage'
 import TreeCrest from './tree/TreeCrest'
+import Watercolor from './watercolor/Watercolor'
 import Express from './scenes/Express'
 import Crisis from './scenes/Crisis'
 import Space from './scenes/Space'
@@ -32,9 +31,7 @@ export default function App() {
 
   return (
     <>
-      <div className="aurora" aria-hidden="true" />
-      <Foliage />
-      <div className="grain" style={{ backgroundImage: 'url(' + grainUrl + ')' }} aria-hidden="true" />
+      <Watercolor />
       <div className="shell">
         <TreeCrest />
         {/* key 让每一幕进场时重放一次过渡；幕内状态不受影响 */}
