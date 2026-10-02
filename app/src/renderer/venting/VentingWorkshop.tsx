@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { SessionController } from '../useSession'
 import PaperShredder from './PaperShredder'
+import StormRustle from './StormRustle'
+import WoodChipping from './WoodChipping'
 import LeafCard from '../cards/LeafCard'
 import SensesCard from '../cards/SensesCard'
 
@@ -8,24 +10,51 @@ export interface VentingWorkshopProps {
   s: SessionController
 }
 
+type VentingToy = 'shred' | 'storm' | 'wood'
+
 export default function VentingWorkshop({ s }: VentingWorkshopProps) {
+  const [activeToy, setActiveToy] = useState<VentingToy>('shred')
   const [calmed, setCalmed] = useState(false)
   const [showTranquilCards, setShowTranquilCards] = useState(true)
 
   return (
     <div className="venting-workshop">
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 16 }}>
         <h1 style={{ margin: 0, fontSize: 21, fontWeight: 700 }}>情绪宣泄工坊</h1>
         <p className="sub" style={{ margin: '6px 0 0' }}>
           把情绪安放在这里。你可以揉碎它，也可以只歇一会儿。
         </p>
       </div>
 
-      {/* 核心宣泄玩具：纸团揉碎撕裂 */}
-      <PaperShredder
-        text={s.input}
-        onCalmed={() => setCalmed(true)}
-      />
+      {/* 玩具切换胶囊 */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <button
+          className={`chip ${activeToy === 'shred' ? 'active' : ''}`}
+          style={activeToy === 'shred' ? { background: 'var(--rim)', color: '#2d4b32', fontWeight: 600 } : {}}
+          onClick={() => setActiveToy('shred')}
+        >
+          纸团揉碎
+        </button>
+        <button
+          className={`chip ${activeToy === 'storm' ? 'active' : ''}`}
+          style={activeToy === 'storm' ? { background: 'var(--rim)', color: '#2d4b32', fontWeight: 600 } : {}}
+          onClick={() => setActiveToy('storm')}
+        >
+          暴风摇树
+        </button>
+        <button
+          className={`chip ${activeToy === 'wood' ? 'active' : ''}`}
+          style={activeToy === 'wood' ? { background: 'var(--rim)', color: '#2d4b32', fontWeight: 600 } : {}}
+          onClick={() => setActiveToy('wood')}
+        >
+          木桩凿削
+        </button>
+      </div>
+
+      {/* 活跃玩具 */}
+      {activeToy === 'shred' && <PaperShredder text={s.input} onCalmed={() => setCalmed(true)} />}
+      {activeToy === 'storm' && <StormRustle onCalmed={() => setCalmed(true)} />}
+      {activeToy === 'wood' && <WoodChipping onCalmed={() => setCalmed(true)} />}
 
       {/* 微风平息与自选转念卡片 */}
       {calmed && (

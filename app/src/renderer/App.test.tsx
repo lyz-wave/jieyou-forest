@@ -139,6 +139,37 @@ describe('四幕界面逐幕走查', () => {
     )
   })
 
+  it('宣泄工坊：支持在纸团、暴风摇树与木桩凿削之间切换并宣泄', async () => {
+    boot()
+    await expressAndSubmit('工作压力太大了')
+
+    fireEvent.click(screen.getByText('先歇一会儿'))
+    await waitFor(() => expect(screen.getByText('情绪宣泄工坊')).toBeTruthy())
+
+    // 检查玩具切换器胶囊
+    expect(screen.getByText('纸团揉碎')).toBeTruthy()
+    expect(screen.getByText('暴风摇树')).toBeTruthy()
+    expect(screen.getByText('木桩凿削')).toBeTruthy()
+
+    // 切换到暴风摇树
+    fireEvent.click(screen.getByText('暴风摇树'))
+    await waitFor(() => expect(screen.getByText(/摇晃或狂击掀起暴风/)).toBeTruthy())
+    fireEvent.click(screen.getByText('狂击掀风'))
+    expect(screen.getByText(/风力等级/)).toBeTruthy()
+
+    // 切换到木桩凿削
+    fireEvent.click(screen.getByText('木桩凿削'))
+    await waitFor(() => expect(screen.getByText(/敲击凿除负重/)).toBeTruthy())
+    fireEvent.click(screen.getByText('挥凿削木'))
+    expect(screen.getByText(/已削除负重/)).toBeTruthy()
+
+    // 完成宣泄后进入平息
+    fireEvent.click(screen.getByText('好受些了'))
+    await waitFor(() =>
+      expect(screen.getByText(/心跳慢下来了吗？如果准备好了，可以换几个视角看清它/)).toBeTruthy(),
+    )
+  })
+
   it('思考路径：没过同意门槛就不产生任何视角', async () => {
     boot()
     await expressAndSubmit()

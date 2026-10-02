@@ -586,6 +586,79 @@ body.pf-night .calm-transition-banner {
   box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.5);
 }
 
+/* 暴风摇树 */
+.storm-rustle-box {
+  background: rgba(246, 250, 246, 0.88);
+  border: 1px solid rgba(170, 205, 175, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 24px -10px rgba(45, 75, 50, 0.16);
+}
+body.pf-night .storm-rustle-box {
+  background: rgba(20, 36, 48, 0.85);
+  border-color: rgba(90, 160, 130, 0.35);
+}
+
+.storm-tree-svg {
+  transform-origin: 50% 90%;
+  transition: transform 0.2s ease;
+}
+.storm-tree-svg.wind-1 { animation: sway 6s ease-in-out infinite alternate; }
+.storm-tree-svg.wind-2 { animation: sway 3s ease-in-out infinite alternate; }
+.storm-tree-svg.wind-3 { animation: sway 1.5s ease-in-out infinite alternate; }
+.storm-tree-svg.wind-4 { animation: sway 0.8s ease-in-out infinite alternate; }
+.storm-tree-svg.wind-5 { animation: sway 0.4s ease-in-out infinite alternate; }
+
+.storm-leaf-particle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #c8642d;
+  border-radius: 50% 0 50% 0;
+  animation: leaf-whirl 1.2s ease-out forwards;
+}
+@keyframes leaf-whirl {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  100% { opacity: 0; transform: translate(140px, -80px) rotate(480deg); }
+}
+.storm-leaf-0 { top: 60px; left: 40%; }
+.storm-leaf-1 { top: 50px; left: 55%; }
+.storm-leaf-2 { top: 70px; left: 45%; }
+.storm-leaf-3 { top: 40px; left: 50%; }
+.storm-leaf-4 { top: 65px; left: 35%; }
+
+/* 木桩凿削 */
+.wood-chipping-box {
+  background: rgba(254, 248, 240, 0.88);
+  border: 1px solid rgba(220, 195, 165, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 24px -10px rgba(85, 60, 30, 0.16);
+}
+body.pf-night .wood-chipping-box {
+  background: rgba(36, 26, 20, 0.85);
+  border-color: rgba(180, 130, 90, 0.35);
+}
+.wood-stump-svg {
+  filter: drop-shadow(0 6px 12px rgba(60, 40, 20, 0.2));
+  transition: transform 0.15s ease;
+}
+.wood-stump-svg:active {
+  transform: scale(0.96);
+}
+.wood-chip-flake {
+  position: absolute;
+  width: 10px;
+  height: 6px;
+  background: #d9be94;
+  border-radius: 2px;
+  animation: chip-fly 0.8s ease-out forwards;
+}
+@keyframes chip-fly {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  100% { opacity: 0; transform: var(--chip-dest) rotate(var(--chip-rot)); }
+}
+.wood-chip-0 { top: 50%; left: 50%; --chip-dest: translate(-60px, -50px); --chip-rot: 200deg; }
+.wood-chip-1 { top: 50%; left: 50%; --chip-dest: translate(65px, -45px); --chip-rot: -180deg; }
+.wood-chip-2 { top: 50%; left: 50%; --chip-dest: translate(-50px, 45px); --chip-rot: 140deg; }
+.wood-chip-3 { top: 50%; left: 50%; --chip-dest: translate(55px, 50px); --chip-rot: -160deg; }
+
 /* ---------- 减少动画 ---------- */
 
 @media (prefers-reduced-motion: reduce) {
