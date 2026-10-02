@@ -60,7 +60,9 @@ export default function RingConfirm({ s }: { s: SessionController }) {
       >
         保存
       </button>{' '}
+      <button className="ghost" onClick={s.openTree}>看看我的树</button>{' '}
       <button className="ghost" onClick={() => s.go('express')}>不保存</button>
     </div>
   )
 }
+

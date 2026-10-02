@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
 import { capabilitiesFor } from '../shared/capabilities'
@@ -9,14 +9,15 @@ import type { Capabilities, RingDraft, RingRow } from '../shared/types'
 // 逐幕走一遍的验收测试：拆分渲染层不应该改变任何一步的界面行为。
 // 假 API 只实现契约，不碰 Electron，所以它能跑在普通 Node 里。
 
-function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean } = {}) {
+function makeFakeApi(opts: { level?: 'L1' | 'L2' | 'L3'; consentOk?: boolean; initialRings?: RingRow[] } = {}) {
   const level = opts.level ?? 'L3'
   // 复用真实的映射，避免测试里再维护一份会漂移的三级表
   const capsFor = (): Capabilities => capabilitiesFor(level)
 
   const receiveListeners: Array<(p: ReceiveChunk) => void> = []
   const reflectionListeners: Array<(p: ReflectionChunk) => void> = []
-  const rings: RingRow[] = []
+  const rings: RingRow[] = opts.initialRings ? [...opts.initialRings] : []
+
 
   const api: ForestApi = {
     submit: async () => {
@@ -317,5 +318,77 @@ describe('四幕界面逐幕走查', () => {
     fireEvent.click(screen.getByText('保存'))
     await waitFor(() => expect(screen.getByText(/明天只找导师核实第一条修改建议/)).toBeTruthy())
   })
+
+  it('年轮盘与情绪圈层：交互式木桩截面、分类筛选与圈层详情抽屉展开', async () => {
+    const initialRings: RingRow[] = [
+      {
+        id: 'ring-work-1',
+        session_id: 's1',
+        type: 'action',
+        user_note: '在职场方案里坚持边界',
+        save_original: 1,
+        original_text: '老板今天又推翻了我的方案，我很焦虑',
+        user_decision: '焦虑',
+        action: '明天只找导师确认修改清单',
+        criterion: '得到明确边界结论',
+        review_due: '2026-10-10',
+        created_at: '2026-10-02',
+        is_demo: 0,
+        idempotency_key: 'ring-work-1',
+      },
+      {
+        id: 'ring-rel-2',
+        session_id: 's2',
+        type: 'support',
+        user_note: '和伴侣吵架后允许自己悲伤',
+        save_original: 0,
+        original_text: null,
+        user_decision: '难过',
+        action: null,
+        criterion: null,
+        review_due: null,
+        created_at: '2026-10-01',
+        is_demo: 0,
+        idempotency_key: 'ring-rel-2',
+      },
+    ]
+
+    boot({ initialRings })
+    await expressAndSubmit()
+    fireEvent.click(screen.getByText('先歇一会儿'))
+    await waitFor(() => expect(screen.getByText('留下一圈年轮')).toBeTruthy())
+    fireEvent.click(screen.getByText('留下一圈年轮'))
+    await waitFor(() => expect(screen.getByText('看看我的树')).toBeTruthy())
+    fireEvent.click(screen.getByText('看看我的树'))
+    await waitFor(() => expect(screen.getByText('我的树')).toBeTruthy())
+
+
+    // 验证截面年轮盘与同心层渲染
+    expect(screen.getByLabelText('木桩截面同心年轮盘')).toBeTruthy()
+    expect(screen.getByTestId('ring-path-ring-work-1')).toBeTruthy()
+    expect(screen.getByTestId('ring-path-ring-rel-2')).toBeTruthy()
+    expect(screen.getByText('2 圈')).toBeTruthy()
+
+    // 验证领域分类筛选
+    expect(screen.getByText(/职场工作 \(1\)/)).toBeTruthy()
+    expect(screen.getByText(/人际亲密 \(1\)/)).toBeTruthy()
+
+    // 点击职场年轮层，验证展开详情抽屉
+    fireEvent.click(screen.getByTestId('ring-path-ring-work-1'))
+    await waitFor(() => expect(screen.getByTestId('ring-detail-drawer')).toBeTruthy())
+    const drawer = screen.getByTestId('ring-detail-drawer')
+    expect(within(drawer).getByText('在职场方案里坚持边界')).toBeTruthy()
+    expect(within(drawer).getByText(/微行动：/)).toBeTruthy()
+    expect(within(drawer).getByText(/明天只找导师确认修改清单/)).toBeTruthy()
+    expect(within(drawer).getByText(/可验证判据：/)).toBeTruthy()
+    expect(within(drawer).getByText(/当时的心事原文：/)).toBeTruthy()
+
+    // 在详情抽屉中删除该年轮
+    fireEvent.click(within(drawer).getByText('删除这圈年轮'))
+    await waitFor(() => expect(screen.queryByTestId('ring-path-ring-work-1')).toBeNull())
+    expect(screen.getByText('1 圈')).toBeTruthy()
+
+  })
 })
+
 

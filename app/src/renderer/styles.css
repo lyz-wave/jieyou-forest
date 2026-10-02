@@ -659,7 +659,75 @@ body.pf-night .wood-chipping-box {
 .wood-chip-2 { top: 50%; left: 50%; --chip-dest: translate(-50px, 45px); --chip-rot: 140deg; }
 .wood-chip-3 { top: 50%; left: 50%; --chip-dest: translate(55px, 50px); --chip-rot: -160deg; }
 
+/* ---------- 木桩截面同心年轮盘与详情卡片 ---------- */
+
+.trunk-disc-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 14px 0 18px;
+}
+
+.trunk-disc-svg {
+  width: 270px;
+  height: 270px;
+  max-width: 90vw;
+  max-height: 90vw;
+  filter: drop-shadow(0 12px 24px rgba(60, 42, 22, 0.2));
+  transition: transform 0.3s var(--spring);
+}
+
+body.pf-night .trunk-disc-svg {
+  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.6));
+}
+
+.trunk-ring-path {
+  transition: stroke-width 0.25s ease, opacity 0.25s ease, filter 0.25s ease;
+}
+
+.trunk-ring-group:hover .trunk-ring-path {
+  opacity: 1 !important;
+}
+
+.trunk-ring-group.selected .trunk-ring-path {
+  opacity: 1 !important;
+}
+
+.trunk-ring-select-dash {
+  animation: rotate-dash 16s linear infinite;
+  transform-origin: 150px 150px;
+}
+
+@keyframes rotate-dash {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 64; }
+}
+
+.trunk-category-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0 12px;
+}
+
+.trunk-detail-card {
+  margin: 14px 0 18px;
+  padding: 16px 18px;
+  border-radius: var(--r-md);
+  background: rgba(255, 252, 245, 0.92);
+  border: 1px solid rgba(220, 205, 185, 0.7);
+  box-shadow: 0 8px 20px -8px rgba(60, 45, 25, 0.12);
+  animation: rise 0.25s var(--spring) both;
+}
+
+body.pf-night .trunk-detail-card {
+  background: rgba(26, 36, 46, 0.9);
+  border-color: rgba(90, 130, 150, 0.45);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.55);
+}
+
 /* ---------- 减少动画 ---------- */
+
 
 @media (prefers-reduced-motion: reduce) {
   *,
