@@ -1,61 +1,319 @@
+/* ============================================================
+   解忧森林 · 视觉系统
+   底色是森林的清晨，材质是玻璃，动效克制。
+   产品约束（PRD §11 / F04）：无闪烁、无粒子、无强刺激；森林是容器不是成绩单。
+   ============================================================ */
+
 :root {
-  --paper: #f6f4ee;
-  --ink: #2f2b26;
-  --muted: #7b746a;
-  --line: #ddd7cb;
-  --leaf: #7d9a6a;
-  --warn: #b4763a;
-  --danger: #a2503f;
+  --ink: #2c2a26;
+  --muted: #6f6a61;
+  --leaf: #6d8d5c;
+  --leaf-deep: #3d5735;
+  --warn: #9a6a2c;
+  --danger: #9c4a3c;
+
+  /* 玻璃材质 */
+  --glass: rgba(255, 255, 255, 0.28);
+  --glass-strong: rgba(255, 255, 255, 0.46);
+  --glass-input: rgba(255, 255, 255, 0.62);
+  --glass-soft: rgba(255, 255, 255, 0.2);
+  --rim: rgba(255, 255, 255, 0.86);
+  --shadow: rgba(46, 42, 34, 0.12);
+  --blur: 26px;
+  --sat: 180%;
+
+  /* 连续圆角 */
+  --r-xl: 30px;
+  --r-lg: 22px;
+  --r-md: 16px;
+  --r-sm: 11px;
+  --r-pill: 999px;
+
+  /* 动效 */
+  --spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 170ms;
+  --t-base: 340ms;
+  --t-slow: 620ms;
 }
+
 * { box-sizing: border-box; }
+
 body {
   margin: 0;
-  background: var(--paper);
   color: var(--ink);
-  font: 15px/1.75 -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font: 15px / 1.75 -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  background: #f1efe7;
+  -webkit-font-smoothing: antialiased;
 }
-.shell { max-width: 720px; margin: 0 auto; padding: 56px 28px 96px; }
-h1 { font-size: 19px; font-weight: 600; margin: 0 0 4px; }
-.sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
-textarea {
-  width: 100%; min-height: 148px; padding: 14px; resize: vertical;
-  border: 1px solid var(--line); border-radius: 10px; background: #fff;
-  font: inherit; color: inherit;
+
+/* ---------- 背景：玻璃要有东西可透 ---------- */
+
+.aurora {
+  position: fixed;
+  inset: -18%;
+  z-index: -1;
+  /* 一条明确的对角色彩带打底，再叠三团柔光。
+     纯靠巨大的径向光斑时，整屏颜色几乎是均匀的，玻璃就"无光可透"。 */
+  /* 关键是：颜色必须在中间的阅读列里就有变化。
+     最浓的颜色若都落在视口两侧（卡片之外），玻璃就无光可透。 */
+  background:
+    radial-gradient(30% 40% at 12% 30%, rgba(88, 138, 70, 0.5), transparent 66%),
+    radial-gradient(28% 36% at 88% 34%, rgba(226, 178, 92, 0.46), transparent 68%),
+    radial-gradient(34% 42% at 52% 96%, rgba(64, 126, 122, 0.44), transparent 70%),
+    linear-gradient(
+      105deg,
+      rgba(96, 146, 78, 0.55) 0%,
+      rgba(128, 166, 100, 0.5) 20%,
+      rgba(200, 194, 126, 0.46) 42%,
+      rgba(226, 186, 118, 0.48) 60%,
+      rgba(108, 160, 148, 0.46) 80%,
+      rgba(92, 142, 96, 0.5) 100%
+    );
+  filter: blur(24px) saturate(130%);
+  animation: drift 52s ease-in-out infinite alternate;
 }
-.row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
-.chip {
-  border: 1px solid var(--line); background: #fff; color: var(--muted);
-  border-radius: 999px; padding: 5px 13px; font: inherit; font-size: 13px; cursor: pointer;
+
+@keyframes drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(0, -2.4%, 0) scale(1.07); }
 }
-.chip[aria-pressed="true"] { border-color: var(--leaf); color: var(--leaf); background: #f0f4ec; }
-button.primary {
-  border: 0; border-radius: 9px; padding: 10px 20px; background: var(--leaf);
-  color: #fff; font: inherit; cursor: pointer;
+
+/* ---------- 布局 ---------- */
+
+.shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 44px 28px 96px;
 }
-button.primary:disabled { background: #c3c8bd; cursor: not-allowed; }
-button.ghost {
-  border: 1px solid var(--line); background: #fff; color: var(--ink);
-  border-radius: 9px; padding: 10px 18px; font: inherit; cursor: pointer;
-}
-.card {
-  background: #fff; border: 1px solid var(--line); border-radius: 12px;
-  padding: 18px 20px; margin: 14px 0;
-}
-.banner {
-  background: #fdf6e8; border: 1px solid #ecd9b0; color: var(--warn);
-  border-radius: 9px; padding: 10px 14px; font-size: 13px; margin: 12px 0;
-}
-.crisis { border-color: #e2c3bb; background: #fdf3f1; }
+
+h1 { font-size: 19px; font-weight: 600; margin: 0 0 4px; letter-spacing: 0.01em; }
+h2 { font-weight: 600; }
+.sub { color: var(--muted); font-size: 13px; margin: 0 0 26px; }
 .muted { color: var(--muted); font-size: 13px; }
-.leaf {
-  display: inline-block; font-size: 30px; transition: transform 1.15s ease-in, opacity 1.15s ease-in;
+
+.scene { animation: scene-in var(--t-slow) var(--spring) both; }
+
+@keyframes scene-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
 }
-.leaf.falling { transform: translateY(150px) rotate(38deg); opacity: 0; }
-.tree { font-size: 26px; letter-spacing: 5px; margin: 8px 0 4px; }
-ul.rings { list-style: none; padding: 0; }
-ul.rings li { border-bottom: 1px solid var(--line); padding: 12px 0; }
-label.field { display: block; margin: 12px 0 4px; font-size: 13px; color: var(--muted); }
-input[type="text"], input[type="date"] {
-  width: 100%; padding: 9px 11px; border: 1px solid var(--line);
-  border-radius: 8px; font: inherit; background: #fff;
+
+/* 幕内元素依次浮现，不抢戏 */
+.scene > * { animation: rise var(--t-slow) var(--spring) both; }
+.scene > *:nth-child(1) { animation-delay: 0ms; }
+.scene > *:nth-child(2) { animation-delay: 55ms; }
+.scene > *:nth-child(3) { animation-delay: 110ms; }
+.scene > *:nth-child(4) { animation-delay: 165ms; }
+.scene > *:nth-child(5) { animation-delay: 220ms; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- 玻璃材质 ---------- */
+
+.card,
+.banner {
+  position: relative;
+  background: var(--glass);
+  backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  border-radius: var(--r-xl);
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    0 1px 2px var(--shadow),
+    0 20px 44px -22px var(--shadow);
+}
+
+/* 高光边：玻璃反射环境光的那一圈 */
+.card::after,
+.banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(155deg, var(--rim), rgba(255, 255, 255, 0.1) 44%, rgba(255, 255, 255, 0.42));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.card { padding: 20px 22px; margin: 16px 0; }
+.banner { padding: 12px 16px; font-size: 13px; color: var(--warn); margin: 14px 0; background: rgba(255, 248, 232, 0.62); }
+
+.card.crisis { background: rgba(255, 243, 240, 0.66); }
+.card.crisis::after { background: linear-gradient(155deg, rgba(255,255,255,.9), rgba(156,74,60,.14) 46%, rgba(255,255,255,.4)); }
+
+/* ---------- 控件 ---------- */
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  border-radius: var(--r-pill);
+}
+
+button.primary,
+button.ghost,
+.chip {
+  backdrop-filter: blur(14px) saturate(170%);
+  -webkit-backdrop-filter: blur(14px) saturate(170%);
+  transition:
+    transform var(--t-fast) var(--spring),
+    box-shadow var(--t-fast) var(--spring),
+    background var(--t-fast) linear,
+    color var(--t-fast) linear;
+}
+
+button.primary {
+  padding: 11px 22px;
+  color: #fff;
+  /* 压暗过：原来的浅色端白字只有 3.08:1，不达 AA。现在两端分别是 4.6:1 与 6.4:1。 */
+  background: linear-gradient(180deg, rgba(90, 120, 75, 0.95), rgba(70, 98, 61, 0.97));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14),
+    0 12px 26px -12px rgba(60, 84, 52, 0.85);
+}
+button.primary:hover:not(:disabled) { transform: translateY(-1px); }
+button.primary:active:not(:disabled) { transform: scale(0.97); }
+button.primary:disabled {
+  background: var(--glass-soft);
+  color: var(--muted);
+  box-shadow: inset 0 1px 0 var(--rim);
+  cursor: not-allowed;
+}
+
+button.ghost {
+  padding: 11px 20px;
+  background: var(--glass);
+  box-shadow: inset 0 1px 0 var(--rim), 0 1px 2px var(--shadow), 0 10px 22px -14px var(--shadow);
+}
+button.ghost:hover { transform: translateY(-1px); background: var(--glass-strong); }
+button.ghost:active { transform: scale(0.97); }
+
+.chip {
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--glass-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.chip:hover { color: var(--ink); background: var(--glass); transform: translateY(-1px); }
+.chip:active { transform: scale(0.96); }
+.chip[aria-pressed="true"] {
+  color: var(--leaf-deep);
+  background: rgba(109, 141, 92, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 0 0 1px rgba(109, 141, 92, 0.35);
+}
+
+.row { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0; align-items: center; }
+
+:focus-visible { outline: 2px solid var(--leaf-deep); outline-offset: 3px; border-radius: var(--r-sm); }
+
+/* ---------- 输入 ---------- */
+
+textarea,
+input[type="text"],
+input[type="date"] {
+  width: 100%;
+  padding: 14px 16px;
+  font: inherit;
+  color: inherit;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--glass-input);
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+    0 10px 26px -18px var(--shadow);
+  transition: box-shadow var(--t-base) var(--spring), background var(--t-base) linear;
+}
+textarea {
+  min-height: 152px;
+  resize: vertical;
+  line-height: 1.8;
+}
+textarea::placeholder { color: rgba(111, 106, 97, 0.62); }
+textarea:focus,
+input[type="text"]:focus,
+input[type="date"]:focus {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    inset 0 0 0 1px rgba(109, 141, 92, 0.5),
+    0 14px 32px -18px rgba(77, 105, 68, 0.5);
+  outline: none;
+}
+
+label.field { display: block; margin: 14px 0 5px; font-size: 13px; color: var(--muted); }
+
+/* ---------- 树 ---------- */
+
+.tree { display: flex; justify-content: center; margin-bottom: 20px; }
+.tree svg {
+  width: 92px;
+  height: auto;
+  transform-origin: 50% 94%;
+  animation: sway 9s ease-in-out infinite alternate;
+  filter: drop-shadow(0 12px 20px rgba(77, 105, 68, 0.18));
+}
+@keyframes sway {
+  from { transform: rotate(-0.9deg); }
+  to { transform: rotate(0.9deg); }
+}
+
+/* ---------- 休息卡里的那片叶子 ---------- */
+
+.leaf {
+  display: inline-block;
+  font-size: 30px;
+  transition: transform 1200ms var(--spring), opacity 1200ms linear;
+}
+.leaf.falling { transform: translate3d(16px, 150px, 0) rotate(38deg); opacity: 0; }
+
+/* ---------- 年轮列表 ---------- */
+
+ul.rings { list-style: none; padding: 0; margin: 0; }
+ul.rings li {
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  animation: rise var(--t-slow) var(--spring) both;
+}
+ul.rings li:last-child { border-bottom: 0; }
+
+/* ---------- 减少动画 ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  /* 位移与缩放全部关掉；状态变化改为纯淡入淡出，仍然看得见 */
+  .scene,
+  .scene > * {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .tree svg { animation: none; transform: none; }
+  .leaf { transition: opacity 480ms linear !important; }
+  .leaf.falling { transform: none; }
+  button.primary:hover:not(:disabled),
+  button.ghost:hover,
+  .chip:hover { transform: none; }
+  button.primary:active:not(:disabled),
+  button.ghost:active,
+  .chip:active { transform: none; }
 }
