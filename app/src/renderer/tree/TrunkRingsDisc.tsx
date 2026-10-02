@@ -1,81 +1,66 @@
 import { useMemo } from 'react'
 import type { RingRow } from '../../shared/types'
 
-export type EmotionTone = 'anxiety' | 'sorrow' | 'anger' | 'fatigue' | 'calm' | 'default'
+/**
+ * 年轮的两种类型。
+ *
+ * 颜色承载的是**用户自己做过的事实**——我留下的是"观察"还是"行动"——
+ * 而不是系统对他内心的判断。
+ *
+ * 这里原本有三样东西，全删了：
+ *
+ * 1. `inferRingEmotion`：用关键词正则把每条年轮判成 anger / anxiety / sorrow /
+ *    fatigue / calm，再上色、贴「激愤释放」「焦虑紧绷」这类标签，最后由
+ *    ResilienceProfile 汇总成「你最经常转化的情绪基调」。
+ *    三个问题：① 系统在替用户定义感受——「你当时是焦虑」就是诊断，PRD §8.1 明令禁止；
+ *    ② 用的是正则，比模型更硬（"我今天一点都不焦虑了"会被判成焦虑）；
+ *    ③ 界面上没有任何"这是推断"的标注，用户也无从否认。
+ *
+ * 2. `inferRingDomain`：把年轮归进职场/人际/自我/创意四格。同样是系统在替用户
+ *    框定处境——"这件事算工作还是算关系"本身就是被强加的框架。
+ *
+ * 3. 这两套推断驱动的筛选与统计。现在筛选改成按**类型**——那是数据库里的字段，
+ *    不需要推断，也不会误判。
+ *
+ * 一句话：**系统不判断用户的感受，也不替他分类处境。**
+ */
+export type RingTone = 'support' | 'action'
 
-export interface EmotionTheme {
+export interface RingTheme {
   label: string
   color: string
   fill: string
   glow: string
 }
 
-export const EMOTION_THEMES: Record<EmotionTone, EmotionTheme> = {
-  anger: {
-    label: '激愤释放',
-    color: '#d9643a',
-    fill: 'rgba(217, 100, 58, 0.22)',
-    glow: 'rgba(217, 100, 58, 0.55)',
-  },
-  anxiety: {
-    label: '焦虑紧绷',
-    color: '#e5a024',
-    fill: 'rgba(229, 160, 36, 0.22)',
-    glow: 'rgba(229, 160, 36, 0.55)',
-  },
-  sorrow: {
-    label: '悲伤委屈',
-    color: '#4b6584',
-    fill: 'rgba(75, 101, 132, 0.22)',
-    glow: 'rgba(75, 101, 132, 0.55)',
-  },
-  fatigue: {
-    label: '疲惫消耗',
-    color: '#8c7b6c',
-    fill: 'rgba(140, 123, 108, 0.22)',
-    glow: 'rgba(140, 123, 108, 0.55)',
-  },
-  calm: {
-    label: '宁静释然',
+export const RING_THEMES: Record<RingTone, RingTheme> = {
+  support: {
+    label: '陪伴年轮',
     color: '#4b7b5e',
     fill: 'rgba(75, 123, 94, 0.22)',
     glow: 'rgba(75, 123, 94, 0.55)',
   },
-  default: {
-    label: '温润原木',
-    color: '#8a7258',
-    fill: 'rgba(138, 114, 88, 0.22)',
-    glow: 'rgba(138, 114, 88, 0.5)',
+  action: {
+    label: '行动年轮',
+    color: '#a9713f',
+    fill: 'rgba(169, 113, 63, 0.22)',
+    glow: 'rgba(169, 113, 63, 0.55)',
   },
 }
 
-export type DomainCategory = 'all' | 'work' | 'relationship' | 'self' | 'creative'
+/** 年轮类型是数据库里的字段，不是推断。 */
+export function ringTone(ring: RingRow): RingTone {
+  return ring.type === 'action' ? 'action' : 'support'
+}
 
-export const DOMAIN_CATEGORIES: Array<{ id: DomainCategory; label: string }> = [
+/** 筛选维度。只有"可核对的事实"，没有系统推断出来的分类。 */
+export type RingTypeFilter = 'all' | RingTone
+
+export const RING_TYPE_FILTERS: Array<{ id: RingTypeFilter; label: string }> = [
   { id: 'all', label: '全部' },
-  { id: 'work', label: '职场工作' },
-  { id: 'relationship', label: '人际亲密' },
-  { id: 'self', label: '自我认同' },
-  { id: 'creative', label: '创意探索' },
+  { id: 'support', label: '陪伴年轮' },
+  { id: 'action', label: '行动年轮' },
 ]
-
-export function inferRingEmotion(ring: RingRow): EmotionTone {
-  const text = `${ring.user_note} ${ring.original_text ?? ''} ${ring.user_decision ?? ''}`
-  if (/生气|愤怒|火大|气愤|暴躁|抓狂|怒/.test(text)) return 'anger'
-  if (/焦虑|慌|担心|急|压力|害怕|失控|紧绷/.test(text)) return 'anxiety'
-  if (/难过|伤心|委屈|哭|痛苦|遗憾|失落|被拒|否定/.test(text)) return 'sorrow'
-  if (/疲惫|累|消耗|精疲力竭|困|倦/.test(text)) return 'fatigue'
-  if (/平静|释然|安稳|松弛|轻松|接纳/.test(text)) return 'calm'
-  return 'default'
-}
-
-export function inferRingDomain(ring: RingRow): DomainCategory {
-  const text = `${ring.user_note} ${ring.original_text ?? ''} ${ring.action ?? ''}`
-  if (/工作|职场|方案|导师|老板|同事|领导|会议|汇报|加班|业绩|指标|面试|公司|离职|入职/.test(text)) return 'work'
-  if (/朋友|伴侣|父母|感情|亲密|吵架|沟通|爸|妈|恋人|家人|恋爱|相处|她|他/.test(text)) return 'relationship'
-  if (/创作|灵感|写|画|设计|代码|比赛|艺术|故事|创意|文章|项目/.test(text)) return 'creative'
-  return 'self'
-}
 
 function hashString(str: string): number {
   let h = 0
@@ -137,14 +122,14 @@ function pointsToSmoothPath(points: Array<{ x: number; y: number }>): string {
 interface TrunkRingsDiscProps {
   rings: RingRow[]
   selectedRingId: string | null
-  activeCategory: DomainCategory
+  activeType: RingTypeFilter
   onSelectRing: (id: string) => void
 }
 
 export default function TrunkRingsDisc({
   rings,
   selectedRingId,
-  activeCategory,
+  activeType,
   onSelectRing,
 }: TrunkRingsDiscProps) {
   const cx = 150
@@ -166,11 +151,10 @@ export default function TrunkRingsDisc({
       const seed = hashString(ring.id || String(idx))
       const points = getWobblePoints(cx, cy, baseR, seed)
       const pathD = pointsToSmoothPath(points)
-      const tone = inferRingEmotion(ring)
-      const theme = EMOTION_THEMES[tone]
-      const domain = inferRingDomain(ring)
+      const tone = ringTone(ring)
+      const theme = RING_THEMES[tone]
       const isSelected = selectedRingId === ring.id
-      const isDimmed = activeCategory !== 'all' && domain !== activeCategory
+      const isDimmed = activeType !== 'all' && tone !== activeType
 
       return {
         ring,
@@ -178,12 +162,11 @@ export default function TrunkRingsDisc({
         baseR,
         tone,
         theme,
-        domain,
         isSelected,
         isDimmed,
       }
     })
-  }, [chronologicalRings, selectedRingId, activeCategory])
+  }, [chronologicalRings, selectedRingId, activeType])
 
   return (
     <div className="trunk-disc-container">

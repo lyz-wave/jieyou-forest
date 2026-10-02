@@ -1,40 +1,30 @@
 import { useState, useMemo } from 'react'
 import type { SessionController } from '../useSession'
-import TrunkRingsDisc, {
-  DOMAIN_CATEGORIES,
-  DomainCategory,
-  inferRingDomain,
-  inferRingEmotion,
-  EMOTION_THEMES,
-} from '../tree/TrunkRingsDisc'
-import ResilienceProfile from '../tree/ResilienceProfile'
+import TrunkRingsDisc, { RING_TYPE_FILTERS, RingTypeFilter, ringTone } from '../tree/TrunkRingsDisc'
+import RingFacts from '../tree/RingFacts'
 import RingReview from '../tree/RingReview'
 
 
 export default function MyTree({ s }: { s: SessionController }) {
   const [selectedRingId, setSelectedRingId] = useState<string | null>(null)
-  const [activeCategory, setActiveCategory] = useState<DomainCategory>('all')
+  const [activeType, setActiveType] = useState<RingTypeFilter>('all')
 
   const selectedRing = useMemo(() => {
     return s.rings.find((r) => r.id === selectedRingId) ?? null
   }, [s.rings, selectedRingId])
 
+  // 筛选维度是**年轮类型**——数据库里的字段，不是系统推断出来的分类。
+  // 原来按「职场/人际/自我/创意」筛，而那四格是用关键词正则猜的：
+  // "这件事算工作还是算关系"本身就是被强加的框架，而且经常猜错。
   const filteredRings = useMemo(() => {
-    if (activeCategory === 'all') return s.rings
-    return s.rings.filter((r) => inferRingDomain(r) === activeCategory)
-  }, [s.rings, activeCategory])
+    if (activeType === 'all') return s.rings
+    return s.rings.filter((r) => ringTone(r) === activeType)
+  }, [s.rings, activeType])
 
-  const categoryCounts = useMemo(() => {
-    const counts: Record<DomainCategory, number> = {
-      all: s.rings.length,
-      work: 0,
-      relationship: 0,
-      self: 0,
-      creative: 0,
-    }
+  const typeCounts = useMemo(() => {
+    const counts: Record<RingTypeFilter, number> = { all: s.rings.length, support: 0, action: 0 }
     s.rings.forEach((r) => {
-      const d = inferRingDomain(r)
-      counts[d] = (counts[d] || 0) + 1
+      counts[ringTone(r)] += 1
     })
     return counts
   }, [s.rings])
@@ -52,16 +42,16 @@ export default function MyTree({ s }: { s: SessionController }) {
         <p className="muted">还没有年轮。</p>
       ) : (
         <>
-          {/* 领域分类筛选器 */}
-          <div className="trunk-category-bar" role="tablist" aria-label="年轮领域分类">
-            {DOMAIN_CATEGORIES.map((cat) => (
+          {/* 按年轮类型筛选。这是数据库里的字段，可核对，不会猜错。 */}
+          <div className="trunk-category-bar" role="tablist" aria-label="年轮类型筛选">
+            {RING_TYPE_FILTERS.map((t) => (
               <button
-                key={cat.id}
+                key={t.id}
                 className="chip"
-                aria-pressed={activeCategory === cat.id}
-                onClick={() => setActiveCategory(cat.id)}
+                aria-pressed={activeType === t.id}
+                onClick={() => setActiveType(t.id)}
               >
-                {cat.label} {categoryCounts[cat.id] > 0 ? `(${categoryCounts[cat.id]})` : ''}
+                {t.label} {typeCounts[t.id] > 0 ? `(${typeCounts[t.id]})` : ''}
               </button>
             ))}
           </div>
@@ -70,12 +60,12 @@ export default function MyTree({ s }: { s: SessionController }) {
           <TrunkRingsDisc
             rings={s.rings}
             selectedRingId={selectedRingId}
-            activeCategory={activeCategory}
+            activeType={activeType}
             onSelectRing={handleSelectRing}
           />
 
           {/* 个人认知韧性图谱 */}
-          <ResilienceProfile rings={s.rings} />
+          <RingFacts rings={s.rings} reviews={s.reviews} />
 
 
           {/* 年轮详情展开卡片 */}
@@ -86,19 +76,11 @@ export default function MyTree({ s }: { s: SessionController }) {
                   <span className="chip" style={{ fontWeight: 600 }}>
                     {selectedRing.type === 'support' ? '陪伴年轮' : '行动年轮'}
                   </span>
-                  <span
-                    className="chip"
-                    style={{
-                      background: EMOTION_THEMES[inferRingEmotion(selectedRing)].fill,
-                      color: EMOTION_THEMES[inferRingEmotion(selectedRing)].color,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {EMOTION_THEMES[inferRingEmotion(selectedRing)].label}
-                  </span>
-                  <span className="chip" style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    {DOMAIN_CATEGORIES.find((c) => c.id === inferRingDomain(selectedRing))?.label}
-                  </span>
+                  {/* 这里原本还有两枚标签：「激愤释放 / 焦虑紧绷 / 悲伤委屈…」
+                      和「职场工作 / 人际亲密 / 自我认同 / 创意探索」。
+                      前者是系统在替用户定义他当时的感受，后者是系统在替他框定处境——
+                      两者都由关键词正则猜出来，且没有任何"这是推断"的标注，用户也无从否认。
+                      都删了。系统不对用户的感受下判断，也不替他分类处境。 */}
                 </div>
                 <button
                   className="ghost"
@@ -205,7 +187,6 @@ export default function MyTree({ s }: { s: SessionController }) {
                   {r.type === 'support' ? '陪伴年轮' : '行动年轮'}
                   {r.review_due ? ' · 复盘日 ' + r.review_due : ''}
                   {s.due.some((d) => d.id === r.id) ? ' · 到期了' : ''}
-                  {' · ' + EMOTION_THEMES[inferRingEmotion(r)].label}
                 </div>
               </li>
             ))}

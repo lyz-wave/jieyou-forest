@@ -366,7 +366,7 @@ describe('四幕界面逐幕走查', () => {
     await waitFor(() => expect(screen.getByText(/明天只找导师核实第一条修改建议/)).toBeTruthy())
   })
 
-  it('年轮盘与情绪圈层：交互式木桩截面、分类筛选与圈层详情抽屉展开', async () => {
+  it('年轮盘与年轮类型：交互式木桩截面、类型筛选与圈层详情抽屉展开', async () => {
     const initialRings: RingRow[] = [
       {
         id: 'ring-work-1',
@@ -416,9 +416,17 @@ describe('四幕界面逐幕走查', () => {
     expect(screen.getByTestId('ring-path-ring-rel-2')).toBeTruthy()
     expect(screen.getByText('2 圈')).toBeTruthy()
 
-    // 验证领域分类筛选
-    expect(screen.getByText(/职场工作 \(1\)/)).toBeTruthy()
-    expect(screen.getByText(/人际亲密 \(1\)/)).toBeTruthy()
+    // 筛选维度是**年轮类型**——数据库里的字段，可核对，不会猜错
+    expect(screen.getByText(/行动年轮 \(1\)/)).toBeTruthy()
+    expect(screen.getByText(/陪伴年轮 \(1\)/)).toBeTruthy()
+
+    // 回归护栏：界面上不该再出现"系统认为你当时是什么情绪"的表述。
+    // 这两枚标签原来是关键词正则猜出来的（"我很焦虑"→「焦虑紧绷」），
+    // 既没有"这是推断"的标注，用户也无从否认——系统在替用户定义感受。
+    expect(screen.queryByText('焦虑紧绷')).toBeNull()
+    expect(screen.queryByText('悲伤委屈')).toBeNull()
+    expect(screen.queryByText(/职场工作/)).toBeNull()
+    expect(screen.queryByText(/人际亲密/)).toBeNull()
 
     // 点击职场年轮层，验证展开详情抽屉
     fireEvent.click(screen.getByTestId('ring-path-ring-work-1'))
@@ -436,7 +444,7 @@ describe('四幕界面逐幕走查', () => {
     expect(screen.getByText('1 圈')).toBeTruthy()
   })
 
-  it('跨时空年轮共鸣智能反哺与个人认知韧性图谱', async () => {
+  it('跨时空年轮共鸣与年轮事实卡', async () => {
     const initialRings: RingRow[] = [
       {
         id: 'ring-historic-1',
@@ -469,13 +477,19 @@ describe('四幕界面逐幕走查', () => {
     fireEvent.click(screen.getByText('查看那圈年轮'))
     await waitFor(() => expect(screen.getByText('我的树')).toBeTruthy())
 
-    // 验证个人认知韧性图谱
-    await waitFor(() => expect(screen.getByTestId('resilience-profile')).toBeTruthy())
-    expect(screen.getByText('个人认知韧性图谱')).toBeTruthy()
-    expect(screen.getByText('总年轮数')).toBeTruthy()
-    expect(screen.getByText('微行动突破率')).toBeTruthy()
-    expect(screen.getByText('100%')).toBeTruthy()
-    expect(screen.getByText('跨领域认知分布')).toBeTruthy()
+    // 验证年轮事实卡——只陈述可核对的事实
+    await waitFor(() => expect(screen.getByTestId('ring-facts')).toBeTruthy())
+    expect(screen.getByText('🌳 你的年轮')).toBeTruthy()
+    expect(screen.getByText('时间跨度')).toBeTruthy()
+    expect(screen.getByText('已经复盘')).toBeTruthy()
+
+    // 回归护栏：「韧性」「突破率」「跨领域分布」这类评估性词汇不该再出现。
+    // PRD §3.2 的非目标里白纸黑字写着「不做认知成长评分」，
+    // 而"突破率 67%"这种词会让用户为了分数而写。
+    expect(screen.queryByText('个人认知韧性图谱')).toBeNull()
+    expect(screen.queryByText('微行动突破率')).toBeNull()
+    expect(screen.queryByText('跨领域认知分布')).toBeNull()
+    expect(screen.queryByText(/最强韧性领域/)).toBeNull()
   })
 
   it('大模型与中转站设置窗口：配置预设切换、连通性测速与保存', async () => {
