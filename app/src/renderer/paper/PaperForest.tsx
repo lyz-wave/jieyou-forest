@@ -1404,6 +1404,11 @@ export default function PaperForest({
       if (e.pointerType === 'mouse' && !s.drag) {
         s.tx = Math.max(-1, Math.min(1, (e.clientX / s.W - 0.5) * 2))
         s.ty = Math.max(-1, Math.min(1, (e.clientY / s.H - 0.5) * 2))
+      } else if (s.drag) {
+        const dx = (e.clientX - s.drag.x) / (s.W * 0.5)
+        const dy = (e.clientY - s.drag.y) / (s.H * 0.5)
+        s.tx = Math.max(-1, Math.min(1, s.drag.tx + dx))
+        s.ty = Math.max(-1, Math.min(1, s.drag.ty + dy))
       }
       if (s.lastPX !== null) {
         const v = (e.clientX - s.lastPX) / Math.max(8, now - s.lastPT)
@@ -1429,6 +1434,16 @@ export default function PaperForest({
       s.drag = null
     }
 
+    const onDeviceOrientation = (e: DeviceOrientationEvent) => {
+      if (e.gamma !== null && e.beta !== null && !s.drag) {
+        const tx = Math.max(-1, Math.min(1, e.gamma / 25))
+        const ty = Math.max(-1, Math.min(1, (e.beta - 45) / 25))
+        s.tx = tx
+        s.ty = ty
+        s.lastInput = performance.now()
+      }
+    }
+
     const onClick = (e: MouseEvent) => {
       if (e.target === foxBtnRef.current) return
       const f = Math.pow(7.7 / 8, 1.15) * s.S
@@ -1443,6 +1458,7 @@ export default function PaperForest({
     window.addEventListener('pointermove', onPointerMove)
     window.addEventListener('pointerdown', onPointerDown)
     window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('deviceorientation', onDeviceOrientation)
     stage.addEventListener('click', onClick)
     window.addEventListener('resize', onResize)
 
@@ -1452,6 +1468,7 @@ export default function PaperForest({
       window.removeEventListener('pointermove', onPointerMove)
       window.removeEventListener('pointerdown', onPointerDown)
       window.removeEventListener('pointerup', onPointerUp)
+      window.removeEventListener('deviceorientation', onDeviceOrientation)
       stage.removeEventListener('click', onClick)
       window.removeEventListener('resize', onResize)
       if (typeof document !== 'undefined') {

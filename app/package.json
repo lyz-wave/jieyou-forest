@@ -11,12 +11,17 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "dist": "electron-vite build && electron-builder",
-    "rebuild:native": "electron-builder install-app-deps"
+    "rebuild:native": "electron-builder install-app-deps",
+    "ios:sync": "electron-vite build && cap sync ios",
+    "ios:open": "cap open ios"
   },
   "dependencies": {
+    "@capacitor/core": "^8.5.2",
     "better-sqlite3": "^13.0.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@types/better-sqlite3": "^7.6.13",

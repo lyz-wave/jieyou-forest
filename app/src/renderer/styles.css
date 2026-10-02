@@ -112,14 +112,22 @@ body {
 
 /* ---------- 布局 ---------- */
 
+html, body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
 .shell {
   max-width: 664px;
+  width: 100%;
   margin: 0 auto;
   min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 40px 28px 52px;
+  padding: max(40px, env(safe-area-inset-top, 24px)) max(20px, env(safe-area-inset-right, 16px)) max(52px, env(safe-area-inset-bottom, 24px)) max(20px, env(safe-area-inset-left, 16px));
   position: relative;
   z-index: 2;
   pointer-events: none;
