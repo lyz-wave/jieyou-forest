@@ -50,8 +50,6 @@ export type { RingResonance } from './resonance'
 
 export interface SubmitInput {
   input: string
-  emotion?: string
-  intensity?: string
 }
 export interface SubmitResult {
   sessionId: string

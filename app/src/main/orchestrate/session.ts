@@ -5,8 +5,6 @@ import type { Capabilities, SessionPath, SessionStatus } from '../../shared/type
 export interface LiveSession {
   id: string
   input: string
-  emotion?: string
-  intensity?: string
   mode?: SessionPath
   consentAt?: string
   status: SessionStatus
@@ -21,10 +19,9 @@ export interface LiveSession {
 export class SessionMemory {
   private live = new Map<string, LiveSession>()
 
-  create(input: string, gate: GateResult, opts: { emotion?: string; intensity?: string } = {}): LiveSession {
+  create(input: string, gate: GateResult): LiveSession {
     const s: LiveSession = {
       id: randomUUID(), input, gate, status: 'receiving', usedFallback: false,
-      emotion: opts.emotion, intensity: opts.intensity,
     }
     this.live.set(s.id, s)
     return s

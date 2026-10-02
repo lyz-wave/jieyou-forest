@@ -461,7 +461,7 @@ describe('四幕界面逐幕走查', () => {
     boot()
 
     // 验证右上角全局模型设置入口
-    const settingsBtn = screen.getByLabelText('打开大模型设置')
+    const settingsBtn = screen.getByLabelText('打开设置')
     expect(settingsBtn).toBeTruthy()
     fireEvent.click(settingsBtn)
 
@@ -544,7 +544,7 @@ describe('四幕界面逐幕走查', () => {
     // 于是界面上有新按钮、桥上却没有新方法。
     delete (api as unknown as Record<string, unknown>).listModels
 
-    fireEvent.click(screen.getByLabelText('打开大模型设置'))
+    fireEvent.click(screen.getByLabelText('打开设置'))
     await waitFor(() => expect(screen.getByText('获取模型列表')).toBeTruthy())
     fireEvent.click(screen.getByText('获取模型列表'))
 

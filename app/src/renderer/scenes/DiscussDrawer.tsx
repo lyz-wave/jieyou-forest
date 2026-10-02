@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { ReflectionCardId } from '../../shared/types'
 import type { DiscussMessage } from '../../shared/ipc'
-import VoiceInputButton from '../voice/VoiceInputButton'
 
 interface DiscussDrawerProps {
   isOpen: boolean
@@ -129,10 +128,6 @@ export default function DiscussDrawer({
   }
 
   // 语音输入识别追加
-  const handleVoiceTranscript = (text: string) => {
-    setInputText((prev) => (prev ? prev + ' ' : '') + text)
-  }
-
   // 提取提炼顿悟并留存年轮
   const handleCaptureInsight = () => {
     const lastAssistantMsg = [...messages].reverse().find((m) => m.role === 'assistant')
@@ -336,7 +331,6 @@ export default function DiscussDrawer({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <VoiceInputButton onTranscript={handleVoiceTranscript} size="sm" />
             <input
               type="text"
               value={inputText}

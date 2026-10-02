@@ -6,6 +6,8 @@ interface PaperForestProps {
   initialNight?: boolean
   onToggleNight?: (isNight: boolean) => void
   showControls?: boolean
+  /** 外部触发重剪：数值变化即重新下剪一次。用于把控件搬进设置后仍能触发。 */
+  recutSignal?: number
 }
 
 // 纯函数 Mulberry32 伪随机种子生成器
@@ -23,6 +25,7 @@ export default function PaperForest({
   initialNight = false,
   onToggleNight,
   showControls = true,
+  recutSignal,
 }: PaperForestProps) {
   const [isNight, setIsNight] = useState(initialNight)
   const stageRef = useRef<HTMLDivElement>(null)
@@ -1230,6 +1233,14 @@ export default function PaperForest({
     }
     stateRef.current.tagV -= 24
   }, [build])
+
+  // 外部触发重剪。控件搬进设置之后走这条路径；只在数值真正变化时触发，挂载时不重剪。
+  const lastRecutSignal = useRef(recutSignal)
+  useEffect(() => {
+    if (recutSignal === undefined || lastRecutSignal.current === recutSignal) return
+    lastRecutSignal.current = recutSignal
+    recut()
+  }, [recutSignal, recut])
 
   // 主循环初始化与挂载
   useEffect(() => {

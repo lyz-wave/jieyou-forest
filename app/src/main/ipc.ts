@@ -56,7 +56,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     if (!payload.input.trim()) throw new Error('空白内容不算一次表达')
 
     const gate = evaluateGate({ text: payload.input }, RULES)
-    const s = c.memory.create(payload.input, gate, { emotion: payload.emotion, intensity: payload.intensity })
+    const s = c.memory.create(payload.input, gate)
     repo.recordEvent(c.db, { anonymousSessionId: s.id, eventName: 'expression_submitted', resultCode: gate.reasonCode })
     if (gate.level !== 'L3') {
       repo.recordEvent(c.db, { anonymousSessionId: s.id, eventName: 'safety_verdict', resultCode: gate.level.toLowerCase() })
@@ -174,7 +174,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
     // 用户按下保存 —— 这是整条链路上第一次往 SQLite 写东西（ADR-0002）
     repo.saveSession(c.db, {
-      id: s.id, input: s.input, selectedEmotion: s.emotion, selectedIntensity: s.intensity,
+      id: s.id, input: s.input,
       mode: s.mode ?? 'rest', reflectionConsentAt: s.consentAt, status: 'optional_save',
     })
     const ringId = repo.saveRing(c.db, s.id, draft, idempotencyKey)
