@@ -1,1 +1,15 @@
 .DS_Store
+
+# 依赖与构建产物
+node_modules/
+out/
+release/
+*.tsbuildinfo
+
+# 根目录误生成的 Xcode 残留；真正的工程在 app/ios/（已跟踪），
+# 故这里必须锚定根目录，否则会把 app/ios/ 一并忽略
+/ios/
+
+# 智能体工作数据（记忆、技能等）
+.workbuddy-ai/
+
