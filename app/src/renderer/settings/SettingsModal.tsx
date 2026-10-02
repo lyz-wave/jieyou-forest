@@ -19,9 +19,7 @@ function bridgeProblem(method: string): string | null {
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
-  /** 纸艺舞台的昼夜状态。这两个控件原本挂在首屏上，属于演示向的东西。 */
-  isNight: boolean
-  onToggleNight: (isNight: boolean) => void
+  /** 重剪。昼夜开关不在这里——见 App.tsx 里右下角那颗按钮的注释。 */
   onRecut: () => void
 }
 
@@ -92,7 +90,7 @@ const PRESETS: ProviderPreset[] = [
   },
 ]
 
-export default function SettingsModal({ isOpen, onClose, isNight, onToggleNight, onRecut }: SettingsModalProps) {
+export default function SettingsModal({ isOpen, onClose, onRecut }: SettingsModalProps) {
   const [config, setConfig] = useState<ModelConfigDto>({
     baseUrl: 'https://api.deepseek.com/v1',
     model: 'deepseek-chat',
@@ -503,22 +501,14 @@ export default function SettingsModal({ isOpen, onClose, isNight, onToggleNight,
           应用直接通过本地网络与你的目标端点发起通信，零中转、零云端留存。即便完全不配置 API，也能离线完整使用所有舒缓与年轮功能。
         </div>
 
-        {/* 纸艺舞台：原本挂在首屏上的两个控件搬到了这里。
-            它们只影响背景观感，与用户写的内容无关，所以不该占据首屏。 */}
+        {/* 纸艺舞台。重剪留在这里，昼夜开关在右下角——
+            两者的份量不同：重剪会重建数百个 DOM 节点，该待在需要专门去找的地方；
+            昼夜是轻操作、而且你想看着它变，所以放在手边。 */}
         <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(180, 160, 130, 0.25)' }}>
           <label className="field" style={{ marginBottom: 8, display: 'block', fontSize: 12, fontWeight: 600 }}>
             纸艺舞台
           </label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="chip"
-              onClick={() => onToggleNight(!isNight)}
-              aria-pressed={isNight}
-              style={{ fontSize: 12, padding: '5px 11px' }}
-            >
-              {isNight ? '切换到白昼' : '切换到静夜'}
-            </button>
             <button
               type="button"
               className="chip"
@@ -529,7 +519,7 @@ export default function SettingsModal({ isOpen, onClose, isNight, onToggleNight,
             </button>
           </div>
           <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--muted)' }}>
-            这两项只影响背景观感，与你的内容无关。
+            重新生成背景的森林剪影。昼夜切换在右下角。
           </p>
         </div>
 

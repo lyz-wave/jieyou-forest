@@ -71,11 +71,41 @@ export default function App() {
         </button>
       </div>
 
+      {/* 昼夜开关放在右下角，而不是设置里。
+          切换会带动整个背景一段过渡动画，而设置弹窗的暗色蒙层 + 12px 模糊
+          会把那段动画完全盖住——你会看不见自己刚触发的那件事。
+          重剪则留在设置里：它重建数百个 DOM 节点，是重操作，该待在需要专门去找的地方。 */}
+      <div style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 100 }}>
+        <button
+          type="button"
+          onClick={() => setIsNight((v) => !v)}
+          aria-pressed={isNight}
+          title={isNight ? '切换到白昼' : '切换到静夜'}
+          aria-label={isNight ? '切换到白昼' : '切换到静夜'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 30,
+            height: 30,
+            padding: 0,
+            fontSize: 13,
+            lineHeight: 1,
+            borderRadius: 999,
+            cursor: 'pointer',
+            color: 'rgba(90, 80, 66, 0.62)',
+            background: 'rgba(255, 252, 245, 0.42)',
+            border: '1px solid rgba(210, 195, 175, 0.38)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          {isNight ? '☀️' : '🌙'}
+        </button>
+      </div>
+
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        isNight={isNight}
-        onToggleNight={setIsNight}
         onRecut={() => setRecutSignal((n) => n + 1)}
       />
 
