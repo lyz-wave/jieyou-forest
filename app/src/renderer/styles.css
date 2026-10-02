@@ -433,6 +433,159 @@ ul.rings li {
 }
 ul.rings li:last-child { border-bottom: 0; }
 
+/* ---------- 情绪宣泄工坊与纸团撕碎 ---------- */
+
+.venting-workshop {
+  width: 100%;
+}
+
+.paper-shredder-box {
+  background: rgba(254, 250, 242, 0.88);
+  border: 1px solid rgba(220, 206, 184, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 24px -10px rgba(78, 56, 32, 0.16);
+}
+
+body.pf-night .paper-shredder-box {
+  background: rgba(26, 30, 68, 0.85);
+  border-color: rgba(140, 155, 210, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 12px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.paper-scrap {
+  position: relative;
+  background: #fbf7ec;
+  border: 1px dashed rgba(180, 160, 130, 0.7);
+  border-radius: 6px;
+  padding: 26px 20px 20px;
+  box-shadow:
+    0 4px 12px rgba(65, 45, 20, 0.12),
+    inset 0 0 30px rgba(230, 215, 185, 0.35);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.28), box-shadow 0.35s ease, filter 0.35s ease;
+}
+
+body.pf-night .paper-scrap {
+  background: #1c224a;
+  border-color: rgba(160, 175, 230, 0.4);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.4),
+    inset 0 0 30px rgba(80, 95, 160, 0.2);
+}
+
+.paper-tape {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 18px;
+  background: rgba(235, 222, 195, 0.75);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-radius: 2px;
+}
+
+.paper-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #3b2d1d;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+body.pf-night .paper-text {
+  color: #ece6f8;
+}
+
+.paper-hint {
+  display: block;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.paper-scrap.crinkle-1 {
+  transform: scale(0.92) rotate(1.8deg);
+  filter: contrast(1.12);
+  box-shadow: 0 8px 18px rgba(65, 45, 20, 0.18);
+}
+
+.paper-scrap.crinkle-2 {
+  transform: scale(0.82) rotate(-3.5deg);
+  filter: contrast(1.25);
+  box-shadow: 0 10px 22px rgba(65, 45, 20, 0.25);
+}
+
+.paper-ball-container {
+  padding: 16px 0;
+  cursor: pointer;
+}
+
+.paper-ball-svg {
+  filter: drop-shadow(0 10px 14px rgba(50, 35, 15, 0.3));
+  animation: wobble-ball 1.2s ease-in-out infinite alternate;
+}
+
+body.pf-night .paper-ball-svg {
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.6));
+}
+
+@keyframes wobble-ball {
+  from { transform: scale(1) rotate(-4deg); }
+  to { transform: scale(1.05) rotate(4deg); }
+}
+
+.shred-burst {
+  position: relative;
+  height: 100px;
+  overflow: hidden;
+}
+
+.shred-flake {
+  position: absolute;
+  width: 14px;
+  height: 18px;
+  background: #ebdcc0;
+  border-radius: 2px;
+  opacity: 0;
+  animation: shred-fly 1s ease-out forwards;
+}
+
+@keyframes shred-fly {
+  0% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: var(--fly-dest) scale(0.4) rotate(var(--fly-rot)); }
+}
+
+.shred-flake-0 { --fly-dest: translate(-80px, -45px); --fly-rot: 140deg; top: 40px; left: 48%; }
+.shred-flake-1 { --fly-dest: translate(90px, -50px); --fly-rot: -120deg; top: 40px; left: 52%; }
+.shred-flake-2 { --fly-dest: translate(-120px, 20px); --fly-rot: 260deg; top: 45px; left: 45%; }
+.shred-flake-3 { --fly-dest: translate(110px, 30px); --fly-rot: -210deg; top: 45px; left: 55%; }
+.shred-flake-4 { --fly-dest: translate(-50px, -70px); --fly-rot: 90deg; top: 38px; left: 50%; }
+.shred-flake-5 { --fly-dest: translate(60px, -65px); --fly-rot: -180deg; top: 38px; left: 51%; }
+.shred-flake-6 { --fly-dest: translate(-70px, 60px); --fly-rot: 170deg; top: 50px; left: 47%; }
+.shred-flake-7 { --fly-dest: translate(80px, 55px); --fly-rot: -140deg; top: 50px; left: 53%; }
+.shred-flake-8 { --fly-dest: translate(-30px, 80px); --fly-rot: 300deg; top: 52px; left: 49%; }
+.shred-flake-9 { --fly-dest: translate(40px, 75px); --fly-rot: -260deg; top: 52px; left: 51%; }
+.shred-flake-10 { --fly-dest: translate(-140px, -10px); --fly-rot: 80deg; top: 42px; left: 46%; }
+.shred-flake-11 { --fly-dest: translate(130px, -15px); --fly-rot: -95deg; top: 42px; left: 54%; }
+
+.calm-transition-banner {
+  background: rgba(240, 248, 238, 0.92);
+  border: 1px solid rgba(135, 175, 135, 0.5);
+  box-shadow: 0 8px 24px -10px rgba(50, 90, 50, 0.18);
+}
+
+body.pf-night .calm-transition-banner {
+  background: rgba(20, 36, 48, 0.9);
+  border-color: rgba(90, 160, 130, 0.45);
+  box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.5);
+}
+
 /* ---------- 减少动画 ---------- */
 
 @media (prefers-reduced-motion: reduce) {

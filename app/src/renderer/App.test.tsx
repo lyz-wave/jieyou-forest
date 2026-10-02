@@ -110,6 +110,35 @@ describe('四幕界面逐幕走查', () => {
     await waitFor(() => expect(screen.getByText('还没有年轮。')).toBeTruthy())
   })
 
+  it('宣泄工坊：纸团揉皱撕碎 → 微风平息 → 自选转念或留年轮', async () => {
+    boot()
+    await expressAndSubmit('项目被评审否决了')
+
+    fireEvent.click(screen.getByText('先歇一会儿'))
+    await waitFor(() => expect(screen.getByText('情绪宣泄工坊')).toBeTruthy())
+    expect(screen.getByText('项目被评审否决了')).toBeTruthy()
+
+    // 揉成纸团
+    fireEvent.click(screen.getByText('揉成纸团'))
+    await waitFor(() => expect(screen.getByText('用力撕碎吹散')).toBeTruthy())
+
+    // 撕碎吹散
+    fireEvent.click(screen.getByText('用力撕碎吹散'))
+    await waitFor(() =>
+      expect(screen.getByText(/心跳慢下来了吗？如果准备好了，可以换几个视角看清它/)).toBeTruthy(),
+    )
+
+    // 平复后提供转念与年轮自选
+    expect(screen.getByText('陪我想一想')).toBeTruthy()
+    expect(screen.getByText('留下一圈年轮')).toBeTruthy()
+
+    // 点击转念，无缝接回同意门槛
+    fireEvent.click(screen.getByText('陪我想一想'))
+    await waitFor(() =>
+      expect(screen.getByText('接下来会一起检查想法，不会否定你的感受。')).toBeTruthy(),
+    )
+  })
+
   it('思考路径：没过同意门槛就不产生任何视角', async () => {
     boot()
     await expressAndSubmit()
