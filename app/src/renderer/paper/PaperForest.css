@@ -187,6 +187,34 @@ body.pf-night .pf-sky-grain {
 .c-fox { fill: #c8642d; } .pf-night .c-fox, body.pf-night .c-fox { fill: #a14f36; }
 .c-foxc { fill: #f6ecd6; } .pf-night .c-foxc, body.pf-night .c-foxc { fill: #d2cbe4; }
 .c-foxd { fill: #3a2b24; } .pf-night .c-foxd, body.pf-night .c-foxd { fill: #17152f; }
+
+.c-owl { fill: #6e5d4f; } .pf-night .c-owl, body.pf-night .c-owl { fill: #3c3856; }
+.c-owlc { fill: #f3ede2; } .pf-night .c-owlc, body.pf-night .c-owlc { fill: #cac5dd; }
+.c-owld { fill: #26201e; } .pf-night .c-owld, body.pf-night .c-owld { fill: #121024; }
+
+.c-bear { fill: #543d31; } .pf-night .c-bear, body.pf-night .c-bear { fill: #2e2942; }
+.c-bearc { fill: #e8dbbe; } .pf-night .c-bearc, body.pf-night .c-bearc { fill: #b8b2cd; }
+.c-beard { fill: #1f1815; } .pf-night .c-beard, body.pf-night .c-beard { fill: #0c0a17; }
+
+.c-deer { fill: #c29b72; } .pf-night .c-deer, body.pf-night .c-deer { fill: #5e6b8c; }
+.c-deerc { fill: #faf5ea; } .pf-night .c-deerc, body.pf-night .c-deerc { fill: #e0e8f5; }
+.c-deerd { fill: #382a20; } .pf-night .c-deerd, body.pf-night .c-deerd { fill: #192038; }
+
+.c-hedge { fill: #615243; } .pf-night .c-hedge, body.pf-night .c-hedge { fill: #32384a; }
+.c-hedgec { fill: #f2dfd0; } .pf-night .c-hedgec, body.pf-night .c-hedgec { fill: #cfc2d8; }
+.c-hedged { fill: #2b201a; } .pf-night .c-hedged, body.pf-night .c-hedged { fill: #121526; }
+
+.c-turtle { fill: #4f6848; } .pf-night .c-turtle, body.pf-night .c-turtle { fill: #2e4348; }
+.c-turtlec { fill: #dbe3c8; } .pf-night .c-turtlec, body.pf-night .c-turtlec { fill: #a6bfb8; }
+.c-turtled { fill: #243322; } .pf-night .c-turtled, body.pf-night .c-turtled { fill: #0e1c1e; }
+
+.c-raccoon { fill: #82807c; } .pf-night .c-raccoon, body.pf-night .c-raccoon { fill: #434255; }
+.c-raccoonc { fill: #f7f4ee; } .pf-night .c-raccoonc, body.pf-night .c-raccoonc { fill: #d2cbe4; }
+.c-raccoond { fill: #2a2522; } .pf-night .c-raccoond, body.pf-night .c-raccoond { fill: #141322; }
+
+.c-bird { fill: #588b94; } .pf-night .c-bird, body.pf-night .c-bird { fill: #3b5a82; }
+.c-birdc { fill: #eaf2f2; } .pf-night .c-birdc, body.pf-night .c-birdc { fill: #c4d6ee; }
+.c-birdd { fill: #1c2833; } .pf-night .c-birdd, body.pf-night .c-birdd { fill: #0c1424; }
 .glowdots { filter: url(#pfSoftGlow); }
 .puff { fill: #e0b673; opacity: 0; } .pf-night .puff, body.pf-night .puff { fill: #9d96cc; }
 

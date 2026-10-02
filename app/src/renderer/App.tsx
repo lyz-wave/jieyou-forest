@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { SessionController } from './useSession'
 import { useSession } from './useSession'
 import PaperForest from './paper/PaperForest'
@@ -12,6 +12,7 @@ import Unfinished from './scenes/Unfinished'
 import RingConfirm from './scenes/RingConfirm'
 import MyTree from './scenes/MyTree'
 import SettingsModal from './settings/SettingsModal'
+import CampfireCouncil from './paper/CampfireCouncil'
 
 function Scene({ s }: { s: SessionController }) {
   switch (s.scene) {
@@ -35,6 +36,25 @@ export default function App() {
   const [isNight, setIsNight] = useState(false)
   const [recutSignal, setRecutSignal] = useState(0)
 
+  // 动物按你的状态分层。这里只需要知道"你是不是正在写字"——
+  // 一动手它们就安静，这一条让八只动物和"首页只剩一句话一个输入框"不必二选一。
+  const [typing, setTyping] = useState(false)
+  useEffect(() => {
+    const onIn = (e: FocusEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT')) setTyping(true)
+    }
+    const onOut = () => setTyping(false)
+    document.addEventListener('focusin', onIn)
+    document.addEventListener('focusout', onOut)
+    return () => {
+      document.removeEventListener('focusin', onIn)
+      document.removeEventListener('focusout', onOut)
+    }
+  }, [])
+
+  const isCampfire = s.scene === 'space' || s.scene === 'reflect'
+
   return (
     <>
       <PaperForest
@@ -42,6 +62,13 @@ export default function App() {
         initialNight={isNight}
         onToggleNight={setIsNight}
         recutSignal={recutSignal}
+      />
+
+      {/* 八只思维动物与温暖篝火。压在内容之下、纸艺舞台之上。 */}
+      <CampfireCouncil
+        s={s}
+        mode={isCampfire ? 'campfire' : 'roam'}
+        isQuiet={typing || s.input.trim().length > 0}
       />
 
       {/* 「我的树」的常驻入口。

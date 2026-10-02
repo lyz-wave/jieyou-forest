@@ -1,0 +1,45 @@
+/* 围炉思辨剧场舞台样式 */
+.campfire-council-stage {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* 键盘输入时动物静默 */
+.campfire-council-stage.is-quiet .animal-sprite-wrap {
+  filter: brightness(0.95);
+}
+
+/* 闲逛态微漂移 */
+.campfire-council-stage.mode-roam:not(.is-quiet) .animal-sprite-wrap {
+  animation: roam-gentle 6s ease-in-out infinite alternate;
+}
+
+@keyframes roam-gentle {
+  0% { transform: translateY(0px); }
+  100% { transform: translateY(-5px); }
+}
+
+/* 篝火升起动画 */
+.campfire-core {
+  will-change: transform, opacity;
+}
+
+/* 对话气泡发光 */
+.animal-speech-bubble {
+  user-select: text;
+}
+
+/* 无障碍：减少动效（PRD F04） */
+@media (prefers-reduced-motion: reduce) {
+  .campfire-council-stage,
+  .campfire-council-stage *,
+  .campfire-core,
+  .campfire-ambient-glow,
+  .animal-sprite-wrap {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,88 @@
+/* 八只动物的场景层。压在内容之下、纸艺舞台之上。 */
+.animal-troupe {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 一层一只。**这是帧率的关键**：
+   SVG 子元素的 transform 拿不到独立合成层，于是每帧重绘整个 SVG——
+   实测八只一起动会掉到 24–56fps。HTML 元素的 transform 能被合成器接管。 */
+.animal-slot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  /* 站位变化走 transition，不是逐帧 JS——"聚拢"那一下才有走过来的感觉 */
+  transition: transform 1.1s cubic-bezier(0.32, 0.9, 0.3, 1);
+  transition-delay: var(--delay, 0s);
+}
+
+/* ---------- 空闲：各自游走 ---------- */
+.animal-wander {
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+  animation: animal-drift 7.5s ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+}
+.animal-slot:nth-child(2n) .animal-wander { animation-duration: 9.5s; }
+.animal-slot:nth-child(3n) .animal-wander { animation-duration: 11s; }
+
+@keyframes animal-drift {
+  from { transform: translateX(-14px); }
+  to { transform: translateX(16px); }
+}
+
+/* 呼吸/摆尾这类微动：任何模式下都保留，幅度极小 */
+.animal-breathe {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  animation: animal-breathe 4.2s ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes animal-breathe {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.012) scaleX(1.004); }
+}
+
+/* ---------- 你在输入：它们安静下来 ---------- */
+/* 只停"位移"，不停"呼吸"——完全静止会像贴纸，留着微动才像活物在憋着不出声 */
+.animal-troupe--quiet .animal-wander { animation: none; }
+
+/* ---------- 聚拢：不再游走 ---------- */
+.animal-troupe--gather .animal-wander,
+.animal-troupe--await .animal-wander,
+.animal-troupe--discuss .animal-wander { animation: none; }
+
+/* ---------- 篝火微光与升起动效 ---------- */
+.animal-campfire {
+  animation: campfire-rise 1s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  filter: drop-shadow(0 0 16px rgba(235, 140, 50, 0.55));
+}
+@keyframes campfire-rise {
+  from { transform: scale(0.3); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ---------- 讨论中：谁说话谁被点亮 ---------- */
+.animal-slot.is-speaking .animal-breathe { animation-duration: 1.6s; }
+.animal-slot.is-speaking svg { filter: drop-shadow(0 0 10px rgba(255, 236, 190, 0.85)); }
+.animal-troupe--discuss .animal-slot:not(.is-speaking) { opacity: 0.72; }
+
+/* ---------- 减少动画：**全部静止** ----------
+   与纸艺剧场同一个标准（PRD F04）：只有位置，没有位移，也没有明暗起伏。
+   这一层是新加的，必须遵守同一条规矩——不能因为"动物很可爱"就开口子。 */
+@media (prefers-reduced-motion: reduce) {
+  .animal-slot,
+  .animal-wander,
+  .animal-breathe,
+  .animal-slot.is-speaking .animal-breathe {
+    animation: none !important;
+    transition: none !important;
+    filter: none !important;
+  }
+}
