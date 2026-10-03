@@ -16,16 +16,55 @@ interface CouncilPosition {
   dir: 1 | -1
 }
 
-// 围炉剧场扇形半包围坐席相对坐标 (相对于中心篝火)
+// 围炉剧场扇形半包围坐席相对坐标（紧密环绕 50%/58% 的篝火，三排纵深）
 const CAMPFIRE_POSITIONS: Record<AnimalSpecies, CouncilPosition> = {
-  bear: { x: 12, y: 32, dir: 1 }, // 后排高位左翼守护
-  deer: { x: 88, y: 32, dir: -1 }, // 后排高位右翼守护
-  owl: { x: 22, y: 44, dir: 1 }, // 中排左翼智囊
-  fox: { x: 78, y: 44, dir: -1 }, // 中排右翼灵动
-  turtle: { x: 30, y: 62, dir: 1 }, // 前中排左侧从容
-  bird: { x: 70, y: 56, dir: -1 }, // 前中排右侧空灵
-  hedgehog: { x: 39, y: 76, dir: 1 }, // 前排内圈近景
-  raccoon: { x: 61, y: 76, dir: -1 }, // 前排内圈行动
+  owl: { x: 38.5, y: 45, dir: 1 }, // 后排左翼智囊
+  fox: { x: 61.5, y: 45, dir: -1 }, // 后排右翼灵动
+  bear: { x: 31, y: 50, dir: 1 }, // 中排左翼守护
+  deer: { x: 69, y: 50, dir: -1 }, // 中排右翼守护
+  hedgehog: { x: 41.5, y: 66, dir: 1 }, // 前排内圈近景
+  bird: { x: 58.5, y: 66, dir: -1 }, // 前排内圈空灵
+  turtle: { x: 44.5, y: 71, dir: 1 }, // 最前排从容
+  raccoon: { x: 55.5, y: 71, dir: -1 }, // 最前排行动
+}
+
+// 聚拢到场次序：前排小个子先落座，大体型压轴，0.08s 步进错峰
+const GATHER_ORDER: AnimalSpecies[] = [
+  'turtle',
+  'hedgehog',
+  'raccoon',
+  'fox',
+  'owl',
+  'bird',
+  'deer',
+  'bear',
+]
+
+// 闲逛漫步律分配（三种轨迹 + 各自周期/相位，避免整齐划一）
+const WANDER_VARIANT: Record<AnimalSpecies, 'a' | 'b' | 'c'> = {
+  fox: 'a',
+  deer: 'b',
+  owl: 'c',
+  bear: 'b',
+  hedgehog: 'a',
+  turtle: 'c',
+  raccoon: 'a',
+  bird: 'c',
+}
+const WANDER_TIMING: Record<AnimalSpecies, { dur: string; del: string }> = {
+  fox: { dur: '9s', del: '0s' },
+  deer: { dur: '12s', del: '-3s' },
+  owl: { dur: '14s', del: '-6s' },
+  bear: { dur: '16s', del: '-2s' },
+  hedgehog: { dur: '10s', del: '-5s' },
+  turtle: { dur: '17s', del: '-8s' },
+  raccoon: { dur: '8s', del: '-1s' },
+  bird: { dur: '7s', del: '-4s' },
+}
+
+// 纵深：按 y 坐标推算远近（0=最远，1=最近）
+function depthOf(y: number): number {
+  return Math.min(1, Math.max(0, (y - 15) / 70))
 }
 
 // 首页林间闲逛自由漫游坐标
@@ -333,7 +372,7 @@ export default function CampfireCouncil({
         )}
       </div>
 
-      {/* 8 只森林动物渲染 */}
+      {/* 8 只森林动物渲染（带纵深：远小近大、远淡近实、脚下贴影、错峰到场） */}
       {(Object.keys(CAMPFIRE_POSITIONS) as AnimalSpecies[]).map((species) => {
         const targetPos = isCampfire ? CAMPFIRE_POSITIONS[species] : ROAM_POSITIONS[species]
         const isSpeaking = activeSpeaker === species
@@ -343,6 +382,13 @@ export default function CampfireCouncil({
             ? clickedGreeting.text
             : undefined
 
+        const depth = depthOf(targetPos.y)
+        const scaleMult = 0.72 + 0.4 * depth // 远 0.72x → 近 1.12x
+        const gatherIdx = GATHER_ORDER.indexOf(species)
+        const arriveDelay = isCampfire ? gatherIdx * 0.08 : 0
+        const meta = ANIMAL_METAS[species]
+        const shadowW = Math.round(64 * meta.scale * scaleMult)
+
         return (
           <div
             key={species}
@@ -351,23 +397,40 @@ export default function CampfireCouncil({
               left: `${targetPos.x}%`,
               top: `${targetPos.y}%`,
               transform: 'translate(-50%, -50%)',
-              transition: 'left 1.3s cubic-bezier(0.22, 1, 0.36, 1), top 1.3s cubic-bezier(0.22, 1, 0.36, 1)',
+              transition:
+                'left 1.3s cubic-bezier(0.22, 1, 0.36, 1), top 1.3s cubic-bezier(0.22, 1, 0.36, 1)',
+              transitionDelay: `${arriveDelay}s`,
               pointerEvents: 'auto',
-              zIndex: isSpeaking ? 50 : 20,
+              zIndex: isSpeaking ? 200 : 10 + Math.round(depth * 30),
+              opacity: 0.85 + 0.15 * depth, // 远处略淡，空气感
             }}
           >
+            {/* 地面贴影，随体型与纵深缩放 */}
+            <div
+              className="animal-ground-shadow"
+              style={{ width: shadowW, height: Math.max(8, Math.round(shadowW * 0.16)) }}
+            />
             <AnimalSprite
               species={species}
               state={isSpeaking ? 'speak' : isCampfire ? 'sit' : 'idle'}
               direction={targetPos.dir}
               speaking={isSpeaking}
               speech={speech}
+              scaleMultiplier={scaleMult}
+              className={`wander-${WANDER_VARIANT[species]}`}
               speechTitle={
                 isCampfire
-                  ? `${ANIMAL_METAS[species].name} · ${ANIMAL_METAS[species].title}`
-                  : ANIMAL_METAS[species].name
+                  ? `${meta.name} · ${meta.title}`
+                  : meta.name
               }
               onClick={() => handleAnimalClick(species)}
+              style={
+                {
+                  '--wdur': WANDER_TIMING[species].dur,
+                  '--wdel': WANDER_TIMING[species].del,
+                  '--arrive': `${arriveDelay + 0.35}s`,
+                } as React.CSSProperties
+              }
             />
           </div>
         )

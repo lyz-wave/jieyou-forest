@@ -68,7 +68,7 @@ export default function App() {
       <CampfireCouncil
         s={s}
         mode={isCampfire ? 'campfire' : 'roam'}
-        isQuiet={typing || s.input.trim().length > 0}
+        isQuiet={typing}
       />
 
       {/* 「我的树」的常驻入口。

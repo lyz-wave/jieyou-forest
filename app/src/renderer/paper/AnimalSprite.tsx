@@ -43,7 +43,7 @@ export const ANIMAL_METAS: Record<AnimalSpecies, AnimalMeta> = {
     name: '棕熊',
     title: '边界守护者',
     role: '守护精力与心理安全底线',
-    scale: 1.55,
+    scale: 1.35,
     color: '#543d31',
   },
   deer: {
@@ -51,7 +51,7 @@ export const ANIMAL_METAS: Record<AnimalSpecies, AnimalMeta> = {
     name: '白鹿',
     title: '温柔接纳者',
     role: '无条件接纳与情绪着陆',
-    scale: 1.3,
+    scale: 1.2,
     color: '#c29b72',
   },
   hedgehog: {
@@ -59,7 +59,7 @@ export const ANIMAL_METAS: Record<AnimalSpecies, AnimalMeta> = {
     name: '刺猬',
     title: '脑补审视者',
     role: '审视灾难化与过度防备',
-    scale: 0.62,
+    scale: 0.68,
     color: '#615243',
   },
   turtle: {
@@ -67,7 +67,7 @@ export const ANIMAL_METAS: Record<AnimalSpecies, AnimalMeta> = {
     name: '乌龟',
     title: '时空纵深者',
     role: '拉开三年纵深，从容释怀',
-    scale: 0.62,
+    scale: 0.72,
     color: '#4f6848',
   },
   raccoon: {
@@ -75,7 +75,7 @@ export const ANIMAL_METAS: Record<AnimalSpecies, AnimalMeta> = {
     name: '小浣熊',
     title: '行动落地派',
     role: '转化 5 分钟微实验抓手',
-    scale: 0.85,
+    scale: 0.9,
     color: '#82807c',
   },
   bird: {
@@ -83,7 +83,7 @@ export const ANIMAL_METAS: Record<AnimalSpecies, AnimalMeta> = {
     name: '青鸟',
     title: '超脱转念者',
     role: '如风过树梢，心不染尘',
-    scale: 0.48,
+    scale: 0.62,
     color: '#588b94',
   },
 }
@@ -381,34 +381,33 @@ function OwlGraphic() {
   )
 }
 
-/** 3. 棕熊 (The Bear) */
+/** 3. 棕熊 (The Bear) —— 肩峰隆起、粗柱腿、大头碟形脸 */
 function BearGraphic() {
   return (
     <g>
-      {/* 远侧粗腿 */}
-      <path className="c-beard" opacity=".78" d="M-38 -28L-34 -1H-46L-48 -28ZM22 -28L26 -1H14L12 -28Z" />
-      {/* 庞大躯干 */}
-      <path
-        className="c-bear"
-        d="M-52 -38C-56 -58 -38 -66 -10 -68C22 -70 48 -64 62 -48C70 -38 68 -24 58 -18C44 -12 28 -14 0 -15C-28 -16 -46 -20 -52 -38Z"
-      />
-      {/* 近侧厚爪 */}
-      <path className="c-beard" d="M-46 -30L-40 0H-54L-56 -24ZM34 -30L40 0H26L24 -24Z" />
+      {/* 远侧粗柱腿 */}
+      <path className="c-beard" opacity=".78" d="M-32 -16L-34 0H-20L-18 -18ZM22 -18L24 0H36L34 -16Z" />
+      {/* 庞大躯干（近 1.7:1，不再拉长成胶囊） */}
+      <ellipse className="c-bear" cx="-8" cy="-34" rx="48" ry="25" />
+      {/* 标志性肩峰 */}
+      <ellipse className="c-bear" cx="24" cy="-50" rx="20" ry="16" />
+      {/* 近侧厚腿 */}
+      <path className="c-beard" d="M-24 -18L-27 0H-9L-7 -18ZM30 -18L29 0H45L45 -20Z" />
       {/* 胸前新月纹 */}
-      <path className="c-bearc" d="M42 -44C38 -36 28 -30 18 -28C26 -25 38 -25 48 -32Z" />
-      {/* 头部与口鼻 */}
+      <path className="c-bearc" d="M30 -40C26 -33 18 -28 10 -27C18 -24 28 -25 36 -31Z" />
+      {/* 大头与碟形脸（呼吸微动效） */}
       <g>
-        <path
-          className="c-bear"
-          d="M48 -44C52 -56 60 -64 74 -64L76 -74L86 -68C92 -66 100 -58 102 -48C104 -38 98 -32 86 -32C72 -32 58 -36 48 -44Z"
-        />
-        {/* 圆耳朵暗色内廓 */}
-        <circle className="c-beard" cx="80" cy="-68" r="4.5" />
+        <ellipse className="c-bear" cx="54" cy="-56" rx="18" ry="15" />
+        {/* 圆耳与暗色内廓 */}
+        <circle className="c-bear" cx="44" cy="-68" r="5" />
+        <circle className="c-bear" cx="62" cy="-69" r="5" />
+        <circle className="c-beard" cx="44" cy="-68" r="2.4" />
+        <circle className="c-beard" cx="62" cy="-69" r="2.4" />
         {/* 浅色吻部 */}
-        <path className="c-bearc" d="M82 -48C88 -54 98 -52 102 -48C102 -40 94 -34 86 -34C82 -36 80 -44 82 -48Z" />
-        {/* 鼻头与小黑眼 */}
-        <circle className="c-beard" cx="100" cy="-45" r="3.2" />
-        <circle className="c-beard" cx="82" cy="-54" r="2.6">
+        <ellipse className="c-bearc" cx="66" cy="-51" rx="9" ry="7" />
+        {/* 鼻头与凝视小眼 */}
+        <circle className="c-beard" cx="73" cy="-53" r="2.8" />
+        <circle className="c-beard" cx="58" cy="-60" r="2.5">
           <animateTransform
             attributeName="transform"
             type="scale"
@@ -422,7 +421,7 @@ function BearGraphic() {
         <animateTransform
           attributeName="transform"
           type="rotate"
-          values="0 48 -44; 2 48 -44; 0 48 -44; -1.5 48 -44; 0 48 -44"
+          values="0 48 -48; 2 48 -48; 0 48 -48; -1.5 48 -48; 0 48 -48"
           dur="5.6s"
           repeatCount="indefinite"
         />
@@ -431,50 +430,52 @@ function BearGraphic() {
   )
 }
 
-/** 4. 白鹿 (The Deer) */
+/** 4. 白鹿 (The Deer) —— 锥形瘦腿、S 形长颈、分叉大角 */
 function DeerGraphic() {
   return (
     <g>
-      {/* 远侧修长腿 */}
-      <path className="c-deerd" opacity=".78" d="M-28 -28L-24 -1H-28ZM18 -28L22 -1H18Z" />
+      {/* 远侧锥形腿 */}
+      <path className="c-deerd" opacity=".78" d="M-24 -20L-23 0H-18L-17 -20ZM14 -20L15 0H20L21 -20Z" />
       {/* 灵秀躯干 */}
-      <path
-        className="c-deer"
-        d="M-36 -32C-40 -45 -26 -52 -4 -52C16 -52 32 -46 42 -38C46 -34 46 -26 40 -20C32 -16 16 -16 -4 -16C-24 -16 -32 -20 -36 -32Z"
-      />
-      {/* 近侧鹿蹄 */}
-      <path className="c-deerd" d="M-32 -26L-27 0H-31ZM26 -26L31 0H27Z" />
+      <ellipse className="c-deer" cx="-4" cy="-30" rx="32" ry="14" />
+      {/* 近侧鹿腿（上粗下细带蹄） */}
+      <path className="c-deerd" d="M-17 -18L-16 0H-11L-10 -18ZM23 -18L24 0H29L30 -18Z" />
       {/* 白腹毛与浅斑 */}
-      <path className="c-deerc" d="M-18 -22C-4 -20 14 -20 28 -25C18 -18 2 -17 -14 -18Z" />
-      <circle className="c-deerc" cx="-12" cy="-38" r="2.2" />
-      <circle className="c-deerc" cx="4" cy="-36" r="2.2" />
-      <circle className="c-deerc" cx="18" cy="-34" r="1.8" />
-      {/* 优雅长颈与头 */}
+      <ellipse className="c-deerc" cx="-4" cy="-24" rx="24" ry="7" />
+      <circle className="c-deerc" cx="-14" cy="-36" r="2.2" />
+      <circle className="c-deerc" cx="2" cy="-35" r="2.2" />
+      <circle className="c-deerc" cx="15" cy="-33" r="1.8" />
+      {/* 短尾 */}
+      <path className="c-deerc" d="M-35 -34L-43 -30L-35 -26Z" />
+      {/* S 形长颈与秀气的头 */}
       <g>
-        <path
-          className="c-deer"
-          d="M32 -38C38 -54 48 -68 54 -76C58 -82 68 -84 76 -78C82 -74 80 -66 70 -62C60 -58 48 -46 42 -36Z"
-        />
-        {/* 枝状鹿角 (独立微晃) */}
+        <path className="c-deer" d="M20 -36C24 -48 28 -58 34 -66L42 -62C37 -54 33 -44 30 -32Z" />
+        <ellipse className="c-deer" cx="46" cy="-66" rx="11" ry="8" transform="rotate(-14 46 -66)" />
+        {/* 吻部与黑鼻 */}
+        <ellipse className="c-deerc" cx="55" cy="-63" rx="4.5" ry="3.2" />
+        <circle className="c-deerd" cx="59" cy="-63" r="1.8" />
+        {/* 立耳 */}
+        <path className="c-deer" d="M40 -72L34 -82L44 -76Z" />
+        {/* 枝状大鹿角 (独立微晃) */}
         <g>
           <path
             className="c-deerd"
-            d="M52 -78L48 -96L44 -90M48 -96L54 -102M54 -76L64 -94L70 -88M64 -94L68 -101"
+            d="M44 -73C42 -82 40 -89 37 -95M41 -83L35 -87M39 -90L33 -94M50 -74C53 -83 55 -90 58 -96M53 -84L59 -88M55 -91L61 -95"
             stroke="currentColor"
-            strokeWidth="2.4"
+            strokeWidth="2.8"
             strokeLinecap="round"
             fill="none"
           />
           <animateTransform
             attributeName="transform"
             type="rotate"
-            values="0 54 -76; 3 54 -76; 0 54 -76; -2 54 -76; 0 54 -76"
+            values="0 46 -72; 3 46 -72; 0 46 -72; -2 46 -72; 0 46 -72"
             dur="4.8s"
             repeatCount="indefinite"
           />
         </g>
-        {/* 鹿眼与黑鼻 */}
-        <circle className="c-deerd" cx="68" cy="-72" r="2.4">
+        {/* 鹿眼 */}
+        <circle className="c-deerd" cx="48" cy="-68" r="2.3">
           <animateTransform
             attributeName="transform"
             type="scale"
@@ -484,7 +485,6 @@ function DeerGraphic() {
             repeatCount="indefinite"
           />
         </circle>
-        <circle className="c-deerd" cx="78" cy="-74" r="1.6" />
       </g>
     </g>
   )
@@ -528,41 +528,44 @@ function HedgehogGraphic() {
   )
 }
 
-/** 6. 乌龟 (The Turtle) */
+/** 6. 乌龟 (The Turtle) —— 高穹壳、四足撑地、探头伸颈、小尾巴 */
 function TurtleGraphic() {
   return (
     <g>
-      {/* 粗短四足 */}
-      <path
-        className="c-turtled"
-        d="M-28 -4C-34 -8 -36 -1 -30 0H-22ZM20 -4C26 -8 28 -1 22 0H14Z"
-      />
-      {/* 圆拱穹顶龟壳 */}
+      {/* 小尾巴 */}
+      <path className="c-turtled" d="M-37 -8L-46 -5L-37 -2Z" />
+      {/* 远侧足 */}
+      <ellipse className="c-turtled" opacity=".78" cx="-16" cy="-3" rx="6" ry="3.4" />
+      <ellipse className="c-turtled" opacity=".78" cx="20" cy="-3" rx="6" ry="3.4" />
+      {/* 高穹顶龟壳 */}
       <path
         className="c-turtle"
-        d="M-36 -12C-40 -34 -20 -46 0 -46C20 -46 40 -34 36 -12C32 -4 18 0 0 0C-18 0 -32 -4 -36 -12Z"
+        d="M-40 -8C-42 -36 -22 -50 0 -50C22 -50 42 -36 40 -8C30 -2 -30 -2 -40 -8Z"
       />
       {/* 壳缘环带 */}
       <path
         className="c-turtlec"
-        d="M-34 -10C-20 -4 20 -4 34 -10C28 -6 -28 -6 -34 -10Z"
+        d="M-40 -8C-30 -2 30 -2 40 -8C30 -4 -30 -4 -40 -8Z"
       />
       {/* 六边形龟壳年轮纹理 */}
       <path
         className="c-turtled"
         opacity=".4"
-        d="M-10 -36L0 -40L10 -36L14 -24L4 -18L-4 -18L-14 -24ZM-14 -24L-24 -20M14 -24L24 -20M0 -18L0 -8"
+        d="M-11 -34L0 -39L11 -34L13 -22L0 -17L-13 -22ZM-13 -28L-25 -25M13 -28L25 -25M0 -17L0 -6"
         stroke="currentColor"
         strokeWidth="1.8"
         fill="none"
       />
+      {/* 近侧粗短足（撑在壳缘外） */}
+      <ellipse className="c-turtled" cx="-27" cy="-4" rx="7.5" ry="5" />
+      <ellipse className="c-turtled" cx="30" cy="-4" rx="7.5" ry="5" />
       {/* 悠闲伸缩的头颈 */}
       <g>
         <path
           className="c-turtlec"
-          d="M32 -14C36 -20 46 -22 52 -18C56 -14 54 -8 46 -6C38 -6 32 -10 32 -14Z"
+          d="M36 -10C42 -16 52 -17 58 -13C62 -10 60 -5 52 -4C44 -4 38 -6 36 -10Z"
         />
-        <circle className="c-turtled" cx="48" cy="-15" r="1.8">
+        <circle className="c-turtled" cx="54" cy="-11" r="2">
           <animateTransform
             attributeName="transform"
             type="scale"
@@ -575,7 +578,7 @@ function TurtleGraphic() {
         <animateTransform
           attributeName="transform"
           type="translate"
-          values="0 0; 4 -2; 0 0; -3 1; 0 0"
+          values="0 0; 5 -1; 0 0; -2 0; 0 0"
           dur="7.5s"
           repeatCount="indefinite"
         />
@@ -642,37 +645,42 @@ function RaccoonGraphic() {
   )
 }
 
-/** 8. 青鸟 (The Bird) */
+/** 8. 青鸟 (The Bird) —— 圆头冠羽、鼓胸翘尾、分层拍翼 */
 function BirdGraphic() {
   return (
     <g>
       {/* 纤细爪足 */}
       <path className="c-birdd" d="M-6 0L-4 -8L-2 0M2 0L4 -8L6 0" stroke="currentColor" strokeWidth="1.5" />
-      {/* 灵秀流线型躯干 */}
-      <path
-        className="c-bird"
-        d="M-22 -20C-28 -32 -16 -40 0 -40C14 -40 24 -34 26 -24C24 -14 14 -10 0 -10C-14 -10 -20 -14 -22 -20Z"
-      />
-      {/* 燕尾羽分叉 */}
-      <path className="c-birdd" d="M-20 -18L-34 -24L-26 -14L-36 -12L-22 -10Z" />
-      {/* 胸部浅云母色渐变羽 */}
-      <path className="c-birdc" d="M-6 -22C4 -26 16 -24 22 -18C14 -12 2 -12 -6 -18Z" />
-      {/* 灵动拍动双翼 */}
+      {/* 扇形尾羽 */}
+      <path className="c-birdd" d="M-13 -26L-32 -32L-27 -21L-37 -18L-13 -14Z" />
+      {/* 圆润躯干与浅胸 */}
+      <ellipse className="c-bird" cx="0" cy="-23" rx="18" ry="13" />
+      <ellipse className="c-birdc" cx="3" cy="-18" rx="10" ry="7" />
+      {/* 灵动拍动翅膀（外层翼 + 内层羽纹） */}
       <g>
         <path
           className="c-bird"
-          d="M-8 -26C-16 -44 -4 -50 8 -42C4 -34 0 -28 -8 -26Z"
+          d="M-4 -30C-14 -46 -2 -54 12 -46C6 -38 2 -32 -4 -30Z"
+        />
+        <path
+          className="c-birdd"
+          opacity=".5"
+          d="M-2 -33C-8 -43 -1 -48 7 -44C3 -38 1 -34 -2 -33Z"
         />
         <animateTransform
           attributeName="transform"
           type="rotate"
-          values="0 -8 -26; -16 -8 -26; 0 -8 -26; 12 -8 -26; 0 -8 -26"
+          values="0 -4 -28; -18 -4 -28; 0 -4 -28; 10 -4 -28; 0 -4 -28"
           dur="1.9s"
           repeatCount="indefinite"
         />
       </g>
-      {/* 巧嘴与明眸 */}
-      <circle className="c-birdd" cx="16" cy="-28" r="1.8">
+      {/* 圆头、冠羽与脸颊 */}
+      <circle className="c-bird" cx="15" cy="-38" r="9" />
+      <path className="c-bird" d="M10 -45L6 -55L15 -47Z" />
+      <circle className="c-birdc" cx="18" cy="-36" r="4.5" />
+      {/* 明眸与巧嘴 */}
+      <circle className="c-birdd" cx="18" cy="-40" r="2">
         <animateTransform
           attributeName="transform"
           type="scale"
@@ -682,7 +690,7 @@ function BirdGraphic() {
           repeatCount="indefinite"
         />
       </circle>
-      <path className="c-birdd" d="M24 -26L32 -24L24 -22Z" />
+      <path className="c-birdd" d="M23 -38L33 -35L23 -33Z" />
     </g>
   )
 }

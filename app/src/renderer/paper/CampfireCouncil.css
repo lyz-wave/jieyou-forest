@@ -12,14 +12,54 @@
   filter: brightness(0.95);
 }
 
-/* 闲逛态微漂移 */
-.campfire-council-stage.mode-roam:not(.is-quiet) .animal-sprite-wrap {
-  animation: roam-gentle 6s ease-in-out infinite alternate;
+/* —— 闲逛态：三律漫步漂移，周期/延迟由行内 --wdur/--wdel 控制 —— */
+.campfire-council-stage.mode-roam:not(.is-quiet) .animal-sprite-wrap.wander-a {
+  animation: wander-a var(--wdur, 11s) ease-in-out var(--wdel, 0s) infinite alternate;
+}
+.campfire-council-stage.mode-roam:not(.is-quiet) .animal-sprite-wrap.wander-b {
+  animation: wander-b var(--wdur, 13s) ease-in-out var(--wdel, 0s) infinite alternate;
+}
+.campfire-council-stage.mode-roam:not(.is-quiet) .animal-sprite-wrap.wander-c {
+  animation: wander-c var(--wdur, 9s) ease-in-out var(--wdel, 0s) infinite alternate;
 }
 
-@keyframes roam-gentle {
-  0% { transform: translateY(0px); }
-  100% { transform: translateY(-5px); }
+/* 小幅横移 + 呼吸浮沉 + 微转身，肉眼可见但不抢戏 */
+@keyframes wander-a {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(1.4vw, -0.7vh) rotate(1.4deg); }
+  100% { transform: translate(-1vw, 0.4vh) rotate(-1deg); }
+}
+@keyframes wander-b {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  40% { transform: translate(-1.6vw, -0.5vh) rotate(-1.6deg); }
+  100% { transform: translate(1.1vw, 0.5vh) rotate(1.1deg); }
+}
+@keyframes wander-c {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  55% { transform: translate(0.9vw, -1vh) rotate(0.8deg); }
+  100% { transform: translate(-1.3vw, -0.2vh) rotate(-1.3deg); }
+}
+
+/* 围炉落座：到场回弹（延迟由行内 --arrive 控制，先到先坐） */
+.campfire-council-stage.mode-campfire .animal-sprite-wrap {
+  animation: sit-settle 0.9s cubic-bezier(0.34, 1.4, 0.64, 1) var(--arrive, 0s) both;
+}
+@keyframes sit-settle {
+  0% { transform: translateY(-10px) scale(1.04); }
+  60% { transform: translateY(2px) scale(0.99); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* 地面贴影：每只动物脚下一片柔光椭圆，撑起纵深感 */
+.animal-ground-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(46, 38, 26, 0.4) 0%, rgba(46, 38, 26, 0) 70%);
+  filter: blur(3px);
+  pointer-events: none;
 }
 
 /* 篝火升起动画 */
