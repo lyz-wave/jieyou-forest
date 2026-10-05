@@ -9,7 +9,11 @@ export default function RingConfirm({ s }: { s: SessionController }) {
 
   const [action, setAction] = useState(s.adoptedExperiment?.action ?? '')
   const [criterion, setCriterion] = useState(s.adoptedExperiment?.observableCriterion ?? '')
-  const [reviewDue, setReviewDue] = useState('')
+  const defaultFutureDate = () => {
+    const d = new Date(Date.now() + 86400000 * 3)
+    return d.toISOString().slice(0, 10)
+  }
+  const [reviewDue, setReviewDue] = useState(defaultFutureDate)
 
   return (
     <div className="card">
@@ -45,7 +49,7 @@ export default function RingConfirm({ s }: { s: SessionController }) {
       </p>
       <button
         className="primary"
-        disabled={!note.trim()}
+        disabled={!note.trim() || (kind === 'action' && (!action.trim() || !criterion.trim()))}
         onClick={() =>
           s.saveRing({
             type: kind,
@@ -54,7 +58,7 @@ export default function RingConfirm({ s }: { s: SessionController }) {
             originalText: saveOriginal ? s.input : undefined,
             action: action || undefined,
             criterion: criterion || undefined,
-            reviewDue: reviewDue || undefined,
+            reviewDue: kind === 'action' ? (reviewDue || defaultFutureDate()) : undefined,
           })
         }
       >
